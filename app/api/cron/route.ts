@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET() {
@@ -27,7 +27,7 @@ export async function GET() {
 
     console.log(`Checking for sessions between ${fromTime} and ${toTime} on ${currentDate}`)
 
-    const { data: sessions } = await supabase
+    const { data: sessions, error } = await supabase
       .from('sessions')
       .select('*')
       .eq('date', currentDate)
@@ -35,7 +35,13 @@ export async function GET() {
       .gte('time', fromTime)
       .lte('time', toTime)
 
+    if (error) {
+      console.log('Supabase error:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     console.log(`Found ${sessions?.length || 0} sessions`)
+    console.log('All scheduled sessions:', JSON.stringify(sessions))
 
     if (!sessions || sessions.length === 0) {
       return NextResponse.json({ 
