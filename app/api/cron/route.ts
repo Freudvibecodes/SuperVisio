@@ -79,7 +79,7 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ message: 'Cron job completed', checked: currentDateTime, started: sessionsToStart.length })
+    return NextResponse.json({ message: 'Cron job completed', checked: currentDate, started: sessionsToStart.length })
 
   } catch (error) {
     console.log('Cron error:', error)
