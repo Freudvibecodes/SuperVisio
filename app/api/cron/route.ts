@@ -12,33 +12,35 @@ export async function GET() {
     
     const torontoOffset = -4 * 60
     const torontoTime = new Date(now.getTime() + torontoOffset * 60 * 1000)
-    const fiveMinutesFromNow = new Date(torontoTime.getTime() + 5 * 60 * 1000)
+    const tenMinutesFromNow = new Date(torontoTime.getTime() + 10 * 60 * 1000)
+    const fiveMinutesAgo = new Date(torontoTime.getTime() - 5 * 60 * 1000)
 
     const currentDate = torontoTime.toISOString().split('T')[0]
-    const currentHour = torontoTime.getUTCHours().toString().padStart(2, '0')
-    const currentMinute = torontoTime.getUTCMinutes().toString().padStart(2, '0')
-    const fiveMinHour = fiveMinutesFromNow.getUTCHours().toString().padStart(2, '0')
-    const fiveMinMinute = fiveMinutesFromNow.getUTCMinutes().toString().padStart(2, '0')
+    
+    const fromHour = fiveMinutesAgo.getUTCHours().toString().padStart(2, '0')
+    const fromMinute = fiveMinutesAgo.getUTCMinutes().toString().padStart(2, '0')
+    const toHour = tenMinutesFromNow.getUTCHours().toString().padStart(2, '0')
+    const toMinute = tenMinutesFromNow.getUTCMinutes().toString().padStart(2, '0')
 
-    const currentTime = `${currentHour}:${currentMinute}`
-    const fiveMinTime = `${fiveMinHour}:${fiveMinMinute}`
+    const fromTime = `${fromHour}:${fromMinute}`
+    const toTime = `${toHour}:${toMinute}`
 
-    console.log(`Checking for sessions between ${currentTime} and ${fiveMinTime} on ${currentDate}`)
+    console.log(`Checking for sessions between ${fromTime} and ${toTime} on ${currentDate}`)
 
     const { data: sessions } = await supabase
       .from('sessions')
       .select('*')
       .eq('date', currentDate)
       .eq('status', 'scheduled')
-      .gte('time', currentTime)
-      .lte('time', fiveMinTime)
+      .gte('time', fromTime)
+      .lte('time', toTime)
 
     console.log(`Found ${sessions?.length || 0} sessions`)
 
     if (!sessions || sessions.length === 0) {
       return NextResponse.json({ 
         message: 'No sessions to start',
-        checked: { date: currentDate, from: currentTime, to: fiveMinTime }
+        checked: { date: currentDate, from: fromTime, to: toTime }
       })
     }
 
@@ -58,6 +60,8 @@ export async function GET() {
       )
 
       const botData = await botResponse.json()
+
+      console.log('Bot response:', JSON.stringify(botData))
 
       if (botData.botId) {
         await supabase
