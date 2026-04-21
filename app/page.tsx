@@ -321,12 +321,32 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
   const handleUploadRecording = async (sessionId: string) => {
     if (!recordingUrl) { alert('Please enter a recording URL'); return }
     setProcessing(sessionId)
-    await supabase.from('sessions').update({ recording_url: recordingUrl, status: 'complete' }).eq('id', sessionId)
-    setSessions(sessions.map(s => s.id === sessionId ? {...s, recording_url: recordingUrl, status: 'complete'} : s))
-    setUploadingFor(null)
-    setRecordingUrl('')
+    
+    await supabase.from('sessions').update({ recording_url: recordingUrl }).eq('id', sessionId)
+    setSessions(sessions.map(s => s.id === sessionId ? {...s, recording_url: recordingUrl} : s))
+    
+    try {
+      const response = await fetch('/api/process-recording', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, recordingUrl }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setSessions(sessions.map(s => s.id === sessionId ? {...s, recording_url: recordingUrl, status: 'complete'} : s))
+        setUploadingFor(null)
+        setRecordingUrl('')
+        alert('Forms generated successfully! Check Ready to review.')
+      } else {
+        alert('Processing failed: ' + (data.error || 'Unknown error'))
+      }
+    } catch {
+      alert('Processing failed. Please try again.')
+    }
+    
     setProcessing(null)
-    alert('Recording saved! Processing will begin shortly.')
   }
 
   return (
