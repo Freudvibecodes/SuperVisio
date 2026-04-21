@@ -8,9 +8,12 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, recordingUrl } = await request.json()
+    const formData = await request.formData()
+    const sessionId = formData.get('sessionId') as string
+    const file = formData.get('file') as File | null
+    const recordingUrl = formData.get('recordingUrl') as string | null
 
-    console.log('Submitting recording for session:', sessionId)
+    console.log('Processing recording for session:', sessionId)
 
     const { data: session } = await supabase
       .from('sessions')
@@ -22,36 +25,88 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
-      method: 'POST',
-      headers: {
-        'Authorization': process.env.ASSEMBLYAI_API_KEY!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        audio_url: recordingUrl,
-        speaker_labels: true,
-        speakers_expected: session.students.length + 1,
-        speech_models: ['universal-2'],
-      }),
-    })
+    let transcriptId: string
 
-    const submitData = await submitResponse.json()
-    console.log('AssemblyAI response:', JSON.stringify(submitData))
+    if (file) {
+      console.log('Uploading file to AssemblyAI...')
+      const fileBuffer = await file.arrayBuffer()
+      
+      const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': process.env.ASSEMBLYAI_API_KEY!,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: fileBuffer,
+      })
 
-    if (!submitData.id) {
-      return NextResponse.json({ error: 'Failed to submit to AssemblyAI', detail: submitData }, { status: 500 })
+      const uploadData = await uploadResponse.json()
+      console.log('Upload response:', JSON.stringify(uploadData))
+
+      if (!uploadData.upload_url) {
+        return NextResponse.json({ error: 'Failed to upload file to AssemblyAI', detail: uploadData }, { status: 500 })
+      }
+
+      const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+        method: 'POST',
+        headers: {
+          'Authorization': process.env.ASSEMBLYAI_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audio_url: uploadData.upload_url,
+          speaker_labels: true,
+          speakers_expected: session.students.length + 1,
+          speech_models: ['universal-2'],
+        }),
+      })
+
+      const submitData = await submitResponse.json()
+      console.log('Transcript submitted:', JSON.stringify(submitData))
+
+      if (!submitData.id) {
+        return NextResponse.json({ error: 'Failed to create transcript', detail: submitData }, { status: 500 })
+      }
+
+      transcriptId = submitData.id
+
+    } else if (recordingUrl) {
+      console.log('Submitting URL to AssemblyAI...')
+      const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+        method: 'POST',
+        headers: {
+          'Authorization': process.env.ASSEMBLYAI_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audio_url: recordingUrl,
+          speaker_labels: true,
+          speakers_expected: session.students.length + 1,
+          speech_models: ['universal-2'],
+        }),
+      })
+
+      const submitData = await submitResponse.json()
+      console.log('Transcript submitted:', JSON.stringify(submitData))
+
+      if (!submitData.id) {
+        return NextResponse.json({ error: 'Failed to create transcript', detail: submitData }, { status: 500 })
+      }
+
+      transcriptId = submitData.id
+    } else {
+      return NextResponse.json({ error: 'No file or URL provided' }, { status: 400 })
     }
 
     await supabase.from('sessions').update({
-      transcript_id: submitData.id,
+      transcript_id: transcriptId,
       status: 'processing',
     }).eq('id', sessionId)
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Recording submitted for processing',
-      transcriptId: submitData.id
+      transcriptId,
     })
 
   } catch (error) {

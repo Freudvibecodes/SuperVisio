@@ -286,7 +286,7 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
           <div style={{fontSize:'14px', fontWeight:'600', color:'#1C1917', marginBottom:'12px'}}>Student progress</div>
           {students.length === 0 ? (
             <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'28px', textAlign:'center'}}>
-              <div style={{fontSize:'13px', color:'#78716C'}}>No students yet — </div>
+              <div style={{fontSize:'13px', color:'#78716C'}}>No students yet —</div>
               <span onClick={() => setPage('students')} style={{fontSize:'13px', color:'#2D5A42', cursor:'pointer', fontWeight:'500'}}>add your first student</span>
             </div>
           ) : (
@@ -343,6 +343,7 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
 function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[], setSessions: (s: Session[]) => void, onNewSession: () => void }) {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
   const [recordingUrl, setRecordingUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
 
   const handleDelete = async (id: string) => {
@@ -352,25 +353,35 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
   }
 
   const handleUploadRecording = async (sessionId: string) => {
-    if (!recordingUrl) { alert('Please enter a recording URL'); return }
+    if (!recordingUrl && !selectedFile) {
+      alert('Please enter a recording URL or select a file')
+      return
+    }
     setProcessing(sessionId)
 
-    await supabase.from('sessions').update({ recording_url: recordingUrl }).eq('id', sessionId)
-
     try {
+      const formData = new FormData()
+      formData.append('sessionId', sessionId)
+
+      if (selectedFile) {
+        formData.append('file', selectedFile)
+      } else {
+        formData.append('recordingUrl', recordingUrl)
+      }
+
       const response = await fetch('/api/process-recording', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, recordingUrl }),
+        body: formData,
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setSessions(sessions.map(s => s.id === sessionId ? { ...s, recording_url: recordingUrl, status: 'processing' } : s))
+        setSessions(sessions.map(s => s.id === sessionId ? { ...s, status: 'processing' } : s))
         setUploadingFor(null)
         setRecordingUrl('')
-        alert('Recording submitted! Your forms will be ready within 15-20 minutes depending on the length of the recording.')
+        setSelectedFile(null)
+        alert('Recording submitted! Your forms will be ready within 15-20 minutes.')
       } else {
         alert('Submission failed: ' + (data.error || 'Unknown error'))
       }
@@ -419,11 +430,14 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
                 {s.status === 'processing' && (
                   <div style={{fontSize:'11.5px', color:'#1E40AF', marginTop:'3px'}}>Transcribing recording — forms will appear in Ready to review when done</div>
                 )}
+                {s.status === 'failed' && (
+                  <div style={{fontSize:'11.5px', color:'#991B1B', marginTop:'3px'}}>Processing failed — please try uploading the recording again</div>
+                )}
               </div>
               <span style={{fontSize:'11.5px', padding:'4px 10px', borderRadius:'20px', fontWeight:'500', background: statusConfig[s.status]?.bg || '#FEF3C7', color: statusConfig[s.status]?.color || '#92400E'}}>
                 {statusConfig[s.status]?.label || s.status}
               </span>
-              {s.status === 'scheduled' && (
+              {(s.status === 'scheduled' || s.status === 'failed') && (
                 <button onClick={() => setUploadingFor(uploadingFor === s.id ? null : s.id)} style={{background:'#EBF3EE', border:'none', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#1C5C3E', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
                   + Add recording
                 </button>
@@ -439,22 +453,42 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
             {uploadingFor === s.id && (
               <div style={{background:'#F9F7F4', border:'1px solid #E8E3DB', borderTop:'none', borderBottomLeftRadius:'10px', borderBottomRightRadius:'10px', padding:'16px 18px', marginBottom:'10px'}}>
                 <div style={{fontSize:'13px', fontWeight:'500', color:'#1C1917', marginBottom:'10px'}}>Add session recording</div>
-                <div style={{display:'flex', gap:'8px', marginBottom:'10px'}}>
+                <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Option 1 — Upload a file directly from your computer:</div>
+                <div
+                  style={{border:'1.5px dashed #D4CFC8', borderRadius:'7px', padding:'16px', textAlign:'center', background:'white', cursor:'pointer', marginBottom:'12px'}}
+                  onClick={() => document.getElementById(`file-input-${s.id}`)?.click()}
+                >
+                  <div style={{fontSize:'13px', color:'#57534E', fontWeight:'500'}}>
+                    {selectedFile ? `✓ ${selectedFile.name}` : 'Click to select recording file'}
+                  </div>
+                  <div style={{fontSize:'11.5px', color:'#78716C', marginTop:'2px'}}>MP4, MOV, M4A, MP3, or WAV</div>
+                  <input
+                    id={`file-input-${s.id}`}
+                    type="file"
+                    accept=".mp4,.mov,.m4a,.mp3,.wav"
+                    style={{display:'none'}}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) { setSelectedFile(file); setRecordingUrl('') }
+                    }}
+                  />
+                </div>
+                <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Option 2 — Paste a direct recording link:</div>
+                <div style={{display:'flex', gap:'8px', marginBottom:'12px'}}>
                   <input
                     value={recordingUrl}
-                    onChange={e => setRecordingUrl(e.target.value)}
-                    placeholder="Paste Zoom or Teams recording link..."
+                    onChange={e => { setRecordingUrl(e.target.value); setSelectedFile(null) }}
+                    placeholder="Paste direct audio/video URL..."
                     style={{flex:1, padding:'8px 12px', border:'1px solid #D4CFC8', borderRadius:'7px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color:'#1C1917'}}
                   />
-                  <button onClick={() => handleUploadRecording(s.id)} disabled={processing === s.id} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'7px', padding:'8px 14px', fontSize:'13px', fontWeight:'500', cursor:'pointer', whiteSpace:'nowrap', opacity: processing === s.id ? 0.7 : 1}}>
-                    {processing === s.id ? 'Submitting...' : 'Submit'}
-                  </button>
                 </div>
-                <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Or upload a file directly:</div>
-                <div style={{border:'1.5px dashed #D4CFC8', borderRadius:'7px', padding:'16px', textAlign:'center', background:'white', cursor:'pointer'}}>
-                  <div style={{fontSize:'13px', color:'#57534E', fontWeight:'500'}}>Click to upload recording</div>
-                  <div style={{fontSize:'11.5px', color:'#78716C', marginTop:'2px'}}>MP4, MOV, or M4A</div>
-                </div>
+                <button
+                  onClick={() => handleUploadRecording(s.id)}
+                  disabled={processing === s.id}
+                  style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'7px', padding:'9px 18px', fontSize:'13px', fontWeight:'500', cursor:'pointer', opacity: processing === s.id ? 0.7 : 1}}
+                >
+                  {processing === s.id ? 'Submitting...' : 'Submit recording'}
+                </button>
               </div>
             )}
           </div>
