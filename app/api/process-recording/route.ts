@@ -27,15 +27,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const { data: formTemplate } = await supabase
+    const { data: formTemplates } = await supabase
       .from('form_templates')
       .select('*')
       .eq('supervisor_id', session.supervisor_id)
-      .single()
 
-    if (!formTemplate) {
-      return NextResponse.json({ error: 'No form template found' }, { status: 404 })
-    }
+const formTemplate = formTemplates?.[0]
+
+if (!formTemplate) {
+  return NextResponse.json({ error: 'No form template found' }, { status: 404 })
+}
 
     console.log('Submitting to AssemblyAI...')
     const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
