@@ -66,6 +66,7 @@ export default function Home() {
     loadStudents(session.user.id)
     loadGeneratedForms(session.user.id)
     setLoading(false)
+    setupRealtime(session.user.id)
   }
 
   const loadSessions = async (userId: string) => {
@@ -90,6 +91,23 @@ export default function Home() {
       .eq('sessions.supervisor_id', userId)
       .order('created_at', { ascending: false })
     if (data) setGeneratedForms(data)
+  }
+const setupRealtime = (userId: string) => {
+    supabase
+      .channel('generated_forms_changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'generated_forms' },
+        async () => {
+          await loadGeneratedForms(userId)
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sessions' },
+        async () => {
+          await loadSessions(userId)
+        }
+      )
+      .subscribe()
   }
 
   const handleSignOut = async () => {
