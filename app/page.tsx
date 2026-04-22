@@ -642,10 +642,41 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
 }
 
 function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms: (f: FormTemplate[]) => void, onUpload: () => void }) {
+  const [selectedForm, setSelectedForm] = useState<FormTemplate | null>(null)
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this form template?')) return
     await supabase.from('form_templates').delete().eq('id', id)
     setForms(forms.filter(f => f.id !== id))
+  }
+
+  if (selectedForm) {
+    return (
+      <div>
+        <button onClick={() => setSelectedForm(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#57534E', fontSize:'13.5px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px', padding:0}}>
+          ← Back to templates
+        </button>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
+          <div>
+            <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Form template</div>
+            <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>{selectedForm.name}</div>
+            <div style={{fontSize:'13.5px', color:'#57534E', marginTop:'3px'}}>{selectedForm.fields.length} fields detected</div>
+          </div>
+        </div>
+        <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'24px 26px'}}>
+          <div style={{fontSize:'13px', fontWeight:'600', color:'#1C1917', marginBottom:'16px'}}>Detected fields</div>
+          {selectedForm.fields.map((field, i) => (
+            <div key={i} style={{display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i < selectedForm.fields.length - 1 ? '1px solid #F2EFE9' : 'none'}}>
+              <div style={{width:'24px', height:'24px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0}}>
+                {i + 1}
+              </div>
+              <div style={{fontSize:'14px', color:'#1C1917', flex:1}}>{field}</div>
+              <div style={{fontSize:'11.5px', color:'#78716C', background:'#F9F7F4', padding:'3px 10px', borderRadius:'20px'}}>AI will fill this</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -663,17 +694,17 @@ function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms:
       ) : (
         <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'14px'}}>
           {forms.map(f => (
-            <div key={f.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'18px 20px'}}>
+            <div key={f.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'18px 20px', cursor:'pointer'}} onClick={() => setSelectedForm(f)}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px'}}>
                 <div style={{width:'36px', height:'36px', borderRadius:'8px', background:'#EBF3EE', display:'flex', alignItems:'center', justifyContent:'center'}}>
                   <svg width="16" height="16" fill="none" stroke="#1C5C3E" strokeWidth="1.5" viewBox="0 0 16 16"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/></svg>
                 </div>
-                <button onClick={() => handleDelete(f.id)} style={{background:'none', border:'none', cursor:'pointer', color:'#A8A29E', padding:'2px'}}>
+                <button onClick={e => { e.stopPropagation(); handleDelete(f.id) }} style={{background:'none', border:'none', cursor:'pointer', color:'#A8A29E', padding:'2px'}}>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 16 16"><polyline points="2,4 14,4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 10h8l1-10"/></svg>
                 </button>
               </div>
               <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917', marginBottom:'3px'}}>{f.name}</div>
-              <div style={{fontSize:'12px', color:'#78716C'}}>{f.fields.length} fields detected</div>
+              <div style={{fontSize:'12px', color:'#78716C'}}>{f.fields.length} fields detected · Click to view</div>
             </div>
           ))}
         </div>
