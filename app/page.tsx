@@ -276,7 +276,6 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
   const firstName = supervisor?.full_name?.split(' ')[0] || 'there'
   const upcoming = sessions.filter(s => s.status === 'scheduled').slice(0, 3)
   const pendingForms = generatedForms.filter(f => f.status === 'pending')
-  const recentForms = generatedForms.slice(0, 3)
   const processing = sessions.filter(s => s.status === 'processing')
   const today = new Date().toISOString().split('T')[0]
   const todaySessions = sessions.filter(s => s.date === today)
@@ -297,8 +296,7 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
   })
 
   const studentsNoRecentSession = students.filter(student => {
-    const studentSessions = sessions.filter(s => s.students.includes(student.name) && s.status === 'scheduled')
-    return studentSessions.length === 0
+    return sessions.filter(s => s.students.includes(student.name) && s.status === 'scheduled').length === 0
   })
 
   const outstanding = [
@@ -309,75 +307,74 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
 
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px'}}>
+      {/* Hero header */}
+      <div style={{background: theme.sidebar, borderRadius:'14px', padding:'22px 26px', marginBottom:'20px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div>
-          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', letterSpacing:'0.3px'}}>{new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'})}</div>
-          <div style={{fontSize:'30px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{greeting}, {firstName}</div>
-          <div style={{fontSize:'14px', color: theme.text2, marginTop:'5px'}}>
+          <div style={{fontSize:'11px', color:'#A8D5BC', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:'4px'}}>{new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'})}</div>
+          <div style={{fontSize:'24px', fontWeight:'700', color:'white', letterSpacing:'-0.3px'}}>{greeting}, {firstName}</div>
+          <div style={{fontSize:'13px', color:'#A8D5BC', marginTop:'3px'}}>
             {todaySessions.length > 0 ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} today` : 'No sessions today'}
             {pendingForms.length > 0 ? ` · ${pendingForms.length} form${pendingForms.length > 1 ? 's' : ''} awaiting review` : ''}
+            {processing.length > 0 ? ` · ${processing.length} recording${processing.length > 1 ? 's' : ''} processing` : ''}
           </div>
         </div>
-        <button onClick={onNewSession} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>+ New session</button>
+        <button onClick={onNewSession} style={{background:'#2D7A52', color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer', flexShrink:0}}>+ New session</button>
       </div>
 
       {pendingForms.length > 0 && (
-        <div onClick={() => setPage('reports')} style={{background: theme.goldLight, border:`1px solid ${theme.gold}40`, borderLeft:`4px solid ${theme.gold}`, borderRadius:'10px', padding:'13px 16px', marginBottom:'16px', fontSize:'13.5px', color: theme.gold, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', fontWeight:'500'}}>
+        <div onClick={() => setPage('reports')} style={{background: theme.goldLight, border:`1px solid ${theme.gold}40`, borderLeft:`4px solid ${theme.gold}`, borderRadius:'10px', padding:'12px 16px', marginBottom:'16px', fontSize:'13px', color: theme.gold, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', fontWeight:'500'}}>
           <span>📋 {pendingForms.length} form{pendingForms.length > 1 ? 's' : ''} ready for your review and signature</span>
-          <span style={{fontSize:'16px'}}>→</span>
+          <span>→</span>
         </div>
       )}
 
-      {processing.length > 0 && (
-        <div style={{background: theme.accentLight, border:`1px solid ${theme.accent}40`, borderLeft:`4px solid ${theme.accent}`, borderRadius:'10px', padding:'13px 16px', marginBottom:'16px', fontSize:'13px', color: theme.accentText, display:'flex', alignItems:'center', gap:'10px'}}>
-          <div style={{width:'8px', height:'8px', borderRadius:'50%', background: theme.accent, flexShrink:0}}></div>
-          {processing.length} recording{processing.length > 1 ? 's' : ''} being transcribed — forms will appear automatically when ready
-        </div>
-      )}
-
-      <div className="stats-grid" style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'14px', marginBottom:'24px'}}>
+      {/* Stats strip */}
+      <div className="stats-grid" style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'20px'}}>
         {[
           {label:'Total students', value: students.length.toString()},
           {label:'Total sessions', value: sessions.length.toString()},
           {label:'Hours supervised', value: sessions.filter(s => s.status === 'complete').length.toString()},
           {label:'Forms pending', value: pendingForms.length.toString()},
         ].map(s => (
-          <div key={s.label} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'18px 20px'}}>
-            <div style={{fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px', color: theme.text3, marginBottom:'10px', fontWeight:'600'}}>{s.label}</div>
-            <div style={{fontSize:'32px', fontWeight:'700', color: theme.text, lineHeight:1, letterSpacing:'-1px'}}>{s.value}</div>
+          <div key={s.label} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 18px'}}>
+            <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.7px', color: theme.text3, marginBottom:'8px', fontWeight:'600'}}>{s.label}</div>
+            <div style={{fontSize:'30px', fontWeight:'700', color: theme.text, lineHeight:1, letterSpacing:'-1px'}}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="two-col" style={{display:'grid', gridTemplateColumns:'1.4fr 0.6fr', gap:'22px', marginBottom:'22px'}}>
+      {/* Three columns */}
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'16px', marginBottom:'20px'}}>
+
+        {/* Column 1 — Students */}
         <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Student progress</div>
+          <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'12px'}}>Student progress</div>
           {students.length === 0 ? (
-            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'32px', textAlign:'center'}}>
-              <div style={{fontSize:'13px', color: theme.text3}}>No students yet — <span onClick={() => setPage('students')} style={{color: theme.accent, cursor:'pointer', fontWeight:'500'}}>add your first student</span></div>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'24px', textAlign:'center'}}>
+              <div style={{fontSize:'12px', color: theme.text3}}>No students yet</div>
+              <span onClick={() => setPage('students')} style={{fontSize:'12px', color: theme.accent, cursor:'pointer', fontWeight:'500'}}>add one →</span>
             </div>
           ) : (
-            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'22px 24px'}}>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 18px'}}>
               {students.map((student, i) => {
                 const hrs = sessions.filter(s => s.students.includes(student.name) && s.status === 'complete').length
                 const percent = Math.round(Math.min((hrs / 30) * 100, 100))
                 const color = percent >= 80 ? '#2D7A52' : percent >= 50 ? '#5A9E7A' : '#C9A84C'
                 return (
-                  <div key={student.id} style={{marginBottom: i < students.length - 1 ? '20px' : '0'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'7px'}}>
-                      <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                        <div style={{width:'30px', height:'30px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'700'}}>
+                  <div key={student.id} style={{marginBottom: i < students.length - 1 ? '14px' : '0'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'5px'}}>
+                      <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                        <div style={{width:'24px', height:'24px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:'700', flexShrink:0}}>
                           {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </div>
-                        <span style={{fontSize:'14px', fontWeight:'500', cursor:'pointer', color: theme.text}} onClick={() => setPage(`student-${student.id}`)}>{student.name}</span>
+                        <span style={{fontSize:'13px', fontWeight:'500', cursor:'pointer', color: theme.text}} onClick={() => setPage(`student-${student.id}`)}>{student.name.split(' ')[0]}</span>
                       </div>
-                      <span style={{fontSize:'12px', color: theme.text2, fontWeight:'500'}}>{hrs} / 30 hrs</span>
+                      <span style={{fontSize:'11px', color: theme.text3}}>{hrs}/30</span>
                     </div>
-                    <div style={{height:'6px', background: theme.surface2, borderRadius:'3px', overflow:'hidden'}}>
-                      <div style={{height:'100%', width:`${percent}%`, background: color, borderRadius:'3px', transition:'width 0.6s ease'}}></div>
+                    <div style={{height:'4px', background: theme.surface2, borderRadius:'2px', overflow:'hidden'}}>
+                      <div style={{height:'100%', width:`${percent}%`, background: color, borderRadius:'2px'}}></div>
                     </div>
-                    <div style={{fontSize:'11.5px', color: theme.text3, marginTop:'4px'}}>{student.program}</div>
-                    {i < students.length - 1 && <div style={{height:'1px', background: theme.border, margin:'18px 0 0'}}></div>}
+                    {i < students.length - 1 && <div style={{height:'1px', background: theme.border, margin:'12px 0 0'}}></div>}
                   </div>
                 )
               })}
@@ -385,111 +382,111 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
           )}
         </div>
 
+        {/* Column 2 — Upcoming */}
         <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Upcoming</div>
+          <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'12px'}}>Upcoming sessions</div>
           {upcoming.length === 0 ? (
-            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'32px', textAlign:'center'}}>
-              <div style={{fontSize:'13px', color: theme.text3}}>No upcoming sessions</div>
-              <span onClick={onNewSession} style={{fontSize:'13px', color: theme.accent, cursor:'pointer', fontWeight:'500', display:'block', marginTop:'4px'}}>schedule one</span>
-            </div>
-          ) : (
-            upcoming.map(s => (
-              <div key={s.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'14px 16px', marginBottom:'10px'}}>
-                <div style={{fontSize:'13.5px', fontWeight:'500', color: theme.text, marginBottom:'4px'}}>{s.name}</div>
-                <div style={{fontSize:'12px', color: theme.text2}}>{s.date} · {s.time}</div>
-                <div style={{fontSize:'12px', color: theme.text3, marginTop:'2px'}}>{s.students.join(', ')}</div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="two-col" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'22px', marginBottom:'22px'}}>
-        <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>This week</div>
-          <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'20px 22px'}}>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'12px', marginBottom:'16px'}}>
-              {[
-                {label:'Sessions', value: weekSessions.length.toString()},
-                {label:'Completed', value: weekComplete.length.toString()},
-                {label:'Forms', value: weekForms.length.toString()},
-              ].map(s => (
-                <div key={s.label} style={{textAlign:'center'}}>
-                  <div style={{fontSize:'22px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{s.value}</div>
-                  <div style={{fontSize:'11px', color: theme.text3, textTransform:'uppercase', letterSpacing:'0.5px', marginTop:'3px'}}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{height:'1px', background: theme.border, marginBottom:'14px'}}></div>
-            <div style={{fontSize:'12px', color: theme.text3, fontStyle:'italic', lineHeight:'1.6', textAlign:'center'}}>"{quote}"</div>
-          </div>
-        </div>
-
-        <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Needs attention</div>
-          {outstanding.length === 0 ? (
-            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'32px', textAlign:'center'}}>
-              <div style={{fontSize:'22px', marginBottom:'8px'}}>✓</div>
-              <div style={{fontSize:'13px', color: theme.text3}}>All caught up</div>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'24px', textAlign:'center'}}>
+              <div style={{fontSize:'12px', color: theme.text3}}>No upcoming sessions</div>
+              <span onClick={onNewSession} style={{fontSize:'12px', color: theme.accent, cursor:'pointer', fontWeight:'500', display:'block', marginTop:'4px'}}>schedule one →</span>
             </div>
           ) : (
             <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', overflow:'hidden'}}>
-              {outstanding.map((item, i) => (
-                <div key={i} onClick={item.action} style={{display:'flex', alignItems:'center', gap:'12px', padding:'12px 16px', borderBottom: i < outstanding.length - 1 ? `1px solid ${theme.border}` : 'none', cursor:'pointer'}}>
-                  <div style={{width:'6px', height:'6px', borderRadius:'50%', background: item.type === 'form' ? theme.gold : item.type === 'error' ? theme.rose : theme.accent, flexShrink:0}}></div>
-                  <div style={{fontSize:'13px', color: theme.text, flex:1}}>{item.text}</div>
-                  <div style={{fontSize:'12px', color: theme.text3}}>→</div>
+              {upcoming.map((s, i) => (
+                <div key={s.id} style={{display:'flex', alignItems:'center', gap:'10px', padding:'12px 14px', borderBottom: i < upcoming.length - 1 ? `1px solid ${theme.border}` : 'none'}}>
+                  <div style={{width:'3px', height:'36px', borderRadius:'2px', background: theme.gold, flexShrink:0}}></div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:'13px', fontWeight:'500', color: theme.text}}>{s.name}</div>
+                    <div style={{fontSize:'11px', color: theme.text3, marginTop:'2px'}}>{s.date} · {s.time}</div>
+                    <div style={{fontSize:'11px', color: theme.text3}}>{s.students.join(', ')}</div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+
+          {/* This week summary */}
+          <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, margin:'16px 0 12px'}}>This week</div>
+          <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 18px'}}>
+            <div style={{display:'flex', justifyContent:'space-around', marginBottom:'14px'}}>
+              {[
+                {label:'Sessions', value: weekSessions.length},
+                {label:'Completed', value: weekComplete.length},
+                {label:'Forms', value: weekForms.length},
+              ].map(s => (
+                <div key={s.label} style={{textAlign:'center'}}>
+                  <div style={{fontSize:'22px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{s.value}</div>
+                  <div style={{fontSize:'10px', color: theme.text3, textTransform:'uppercase', letterSpacing:'0.4px', marginTop:'2px'}}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{height:'1px', background: theme.border, marginBottom:'12px'}}></div>
+            <div style={{fontSize:'11.5px', color: theme.text3, fontStyle:'italic', lineHeight:'1.6', textAlign:'center'}}>"{quote}"</div>
+          </div>
+        </div>
+
+        {/* Column 3 — Tasks + Recent forms */}
+        <div>
+          <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'12px'}}>Needs attention</div>
+          {outstanding.length === 0 ? (
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'24px', textAlign:'center', marginBottom:'16px'}}>
+              <div style={{fontSize:'20px', marginBottom:'6px'}}>✓</div>
+              <div style={{fontSize:'12px', color: theme.text3}}>All caught up</div>
+            </div>
+          ) : (
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', overflow:'hidden', marginBottom:'16px'}}>
+              {outstanding.map((item, i) => (
+                <div key={i} onClick={item.action} style={{display:'flex', alignItems:'center', gap:'10px', padding:'11px 14px', borderBottom: i < outstanding.length - 1 ? `1px solid ${theme.border}` : 'none', cursor:'pointer'}}>
+                  <div style={{width:'6px', height:'6px', borderRadius:'50%', background: item.type === 'form' ? theme.gold : item.type === 'error' ? theme.rose : theme.accent, flexShrink:0}}></div>
+                  <div style={{fontSize:'12.5px', color: theme.text, flex:1}}>{item.text}</div>
+                  <div style={{fontSize:'11px', color: theme.text3}}>→</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {studentsNearComplete.length > 0 && (
+            <>
+              <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'12px'}}>Almost there 🎯</div>
+              <div style={{background: theme.surface, border:`2px solid ${theme.accent}30`, borderRadius:'12px', overflow:'hidden'}}>
+                {studentsNearComplete.map((student, i) => {
+                  const hrs = sessions.filter(s => s.students.includes(student.name) && s.status === 'complete').length
+                  return (
+                    <div key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{display:'flex', alignItems:'center', gap:'10px', padding:'11px 14px', borderBottom: i < studentsNearComplete.length - 1 ? `1px solid ${theme.border}` : 'none', cursor:'pointer'}}>
+                      <div style={{width:'28px', height:'28px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'9px', fontWeight:'700', flexShrink:0}}>
+                        {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'12.5px', fontWeight:'500', color: theme.text}}>{student.name.split(' ')[0]}</div>
+                        <div style={{fontSize:'11px', color: theme.accentText, fontWeight:'600'}}>{30 - hrs} hrs to go</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {studentsNearComplete.length > 0 && (
-        <div style={{marginBottom:'22px'}}>
-          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Almost there 🎯</div>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'14px'}}>
-            {studentsNearComplete.map(student => {
-              const hrs = sessions.filter(s => s.students.includes(student.name) && s.status === 'complete').length
-              return (
-                <div key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{background: theme.surface, border:`2px solid ${theme.accent}40`, borderRadius:'12px', padding:'16px 18px', cursor:'pointer'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px'}}>
-                    <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700'}}>
-                      {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{fontSize:'13.5px', fontWeight:'500', color: theme.text}}>{student.name}</div>
-                      <div style={{fontSize:'11.5px', color: theme.accentText, fontWeight:'600'}}>{30 - hrs} hours to go</div>
-                    </div>
-                  </div>
-                  <div style={{height:'5px', background: theme.surface2, borderRadius:'3px', overflow:'hidden'}}>
-                    <div style={{height:'100%', width:`${Math.round((hrs/30)*100)}%`, background: theme.accent, borderRadius:'3px'}}></div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {recentForms.length > 0 && (
+      {/* Recent forms strip */}
+      {generatedForms.length > 0 && (
         <div>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px'}}>
-            <div style={{fontSize:'14px', fontWeight:'600', color: theme.text}}>Recent forms</div>
-            <button onClick={() => setPage('reports')} style={{background:'none', border:'none', fontSize:'13px', color: theme.accent, cursor:'pointer', fontWeight:'500'}}>View all →</button>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px'}}>
+            <div style={{fontSize:'13px', fontWeight:'600', color: theme.text}}>Recent forms</div>
+            <button onClick={() => setPage('reports')} style={{background:'none', border:'none', fontSize:'12.5px', color: theme.accent, cursor:'pointer', fontWeight:'500'}}>View all →</button>
           </div>
           <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', overflow:'hidden'}}>
-            {recentForms.map((f, i) => (
-              <div key={f.id} onClick={() => setPage('reports')} style={{display:'flex', alignItems:'center', gap:'14px', padding:'13px 18px', borderBottom: i < recentForms.length - 1 ? `1px solid ${theme.border}` : 'none', cursor:'pointer'}}>
-                <div style={{width:'36px', height:'36px', borderRadius:'8px', background: f.status === 'signed' ? theme.accentLight : theme.roseLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                  <svg width="14" height="14" fill="none" stroke={f.status === 'signed' ? theme.accentText : theme.rose} strokeWidth="1.5" viewBox="0 0 16 16">
+            {generatedForms.slice(0, 3).map((f, i) => (
+              <div key={f.id} onClick={() => setPage('reports')} style={{display:'flex', alignItems:'center', gap:'14px', padding:'12px 18px', borderBottom: i < Math.min(generatedForms.length, 3) - 1 ? `1px solid ${theme.border}` : 'none', cursor:'pointer'}}>
+                <div style={{width:'32px', height:'32px', borderRadius:'8px', background: f.status === 'signed' ? theme.accentLight : theme.roseLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <svg width="13" height="13" fill="none" stroke={f.status === 'signed' ? theme.accentText : theme.rose} strokeWidth="1.5" viewBox="0 0 16 16">
                     {f.status === 'signed' ? <polyline points="3,8 6.5,11.5 13,5"/> : <><path d="M4 2h8v12H4z"/><line x1="6.5" y1="6" x2="9.5" y2="6"/><line x1="6.5" y1="9" x2="9.5" y2="9"/></>}
                   </svg>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontSize:'13.5px', fontWeight:'500', color: theme.text}}>{f.student_name}</div>
-                  <div style={{fontSize:'12px', color: theme.text3, marginTop:'1px'}}>{new Date((f as any).created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div>
+                  <div style={{fontSize:'11.5px', color: theme.text3, marginTop:'1px'}}>{new Date((f as any).created_at).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</div>
                 </div>
                 <span style={{fontSize:'11.5px', padding:'3px 10px', borderRadius:'20px', fontWeight:'600', background: f.status === 'signed' ? theme.accentLight : theme.roseLight, color: f.status === 'signed' ? theme.accentText : theme.rose}}>
                   {f.status === 'signed' ? 'Signed' : 'Review'}
