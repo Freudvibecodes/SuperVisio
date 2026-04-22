@@ -249,9 +249,26 @@ export default function Home() {
 function LandingPage() {
   return (
     <div style={{fontFamily:'system-ui, sans-serif', color:'#1A1614', minHeight:'100vh'}}>
+      <style>{`
+        @media (max-width: 768px) {
+          .l-nav { padding: 0 20px !important; }
+          .l-hero { padding: 60px 24px 70px !important; }
+          .l-hero-h1 { font-size: 36px !important; letter-spacing: -0.5px !important; }
+          .l-hero-p { font-size: 15px !important; }
+          .l-hero-btns { flex-direction: column !important; align-items: stretch !important; text-align: center !important; }
+          .l-section { padding: 56px 24px !important; }
+          .l-h2 { font-size: 26px !important; letter-spacing: -0.3px !important; }
+          .l-grid-3 { grid-template-columns: 1fr !important; }
+          .l-grid-2 { grid-template-columns: 1fr !important; }
+          .l-steps { grid-template-columns: 1fr !important; gap: 36px !important; }
+          .l-stats { grid-template-columns: 1fr !important; }
+          .l-footer { padding: 24px 20px !important; flex-direction: column !important; gap: 8px !important; text-align: center !important; }
+          .l-cta-h2 { font-size: 30px !important; }
+        }
+      `}</style>
 
       {/* Nav */}
-      <nav style={{background:'#1A3C2E', padding:'0 60px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px', position:'sticky', top:0, zIndex:50}}>
+      <nav className="l-nav" style={{background:'#1A3C2E', padding:'0 60px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px', position:'sticky', top:0, zIndex:50}}>
         <div style={{fontSize:'20px', fontWeight:'700', color:'white', letterSpacing:'-0.3px'}}>Supervisio</div>
         <div style={{display:'flex', alignItems:'center', gap:'16px'}}>
           <a href="/auth" style={{color:'#C8DDD4', fontSize:'14px', textDecoration:'none', fontWeight:'500'}}>Sign in</a>
@@ -260,33 +277,33 @@ function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <div style={{background:'#1A3C2E', padding:'100px 60px 110px', textAlign:'center'}}>
+      <div className="l-hero" style={{background:'#1A3C2E', padding:'100px 60px 110px', textAlign:'center'}}>
         <div style={{display:'inline-block', background:'rgba(255,255,255,0.1)', color:'#A8D5BC', fontSize:'12px', fontWeight:'600', padding:'6px 16px', borderRadius:'20px', letterSpacing:'0.8px', textTransform:'uppercase', marginBottom:'28px'}}>
           Built for clinical supervisors
         </div>
-        <h1 style={{fontSize:'56px', fontWeight:'800', color:'white', lineHeight:'1.1', letterSpacing:'-1.5px', margin:'0 auto 24px', maxWidth:'760px'}}>
+        <h1 className="l-hero-h1" style={{fontSize:'56px', fontWeight:'800', color:'white', lineHeight:'1.1', letterSpacing:'-1.5px', margin:'0 auto 24px', maxWidth:'760px'}}>
           Supervision paperwork,<br />
           <span style={{color:'#6BCF94'}}>done automatically.</span>
         </h1>
-        <p style={{fontSize:'19px', color:'#A8D5BC', lineHeight:'1.7', maxWidth:'560px', margin:'0 auto 44px'}}>
+        <p className="l-hero-p" style={{fontSize:'19px', color:'#A8D5BC', lineHeight:'1.7', maxWidth:'560px', margin:'0 auto 44px'}}>
           Upload your session recording. Supervisio transcribes it, fills in your supervision forms per student, and generates a Word document ready to submit — automatically.
         </p>
-        <div style={{display:'flex', gap:'14px', justifyContent:'center', alignItems:'center'}}>
+        <div className="l-hero-btns" style={{display:'flex', gap:'14px', justifyContent:'center', alignItems:'center'}}>
           <a href="/auth" style={{background:'#6BCF94', color:'#1A3C2E', padding:'14px 32px', borderRadius:'10px', fontSize:'16px', fontWeight:'700', textDecoration:'none'}}>Start for free →</a>
           <a href="#how" style={{color:'#A8D5BC', fontSize:'15px', fontWeight:'500', textDecoration:'none'}}>See how it works ↓</a>
         </div>
       </div>
 
       {/* Problem */}
-      <div style={{background:'#EDE8DF', padding:'80px 60px', textAlign:'center'}}>
+      <div className="l-section" style={{background:'#EDE8DF', padding:'80px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'680px', margin:'0 auto'}}>
-          <h2 style={{fontSize:'34px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'20px'}}>
+          <h2 className="l-h2" style={{fontSize:'34px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'20px'}}>
             Designed to reduce administrative burden
           </h2>
           <p style={{fontSize:'17px', color:'#6B6259', lineHeight:'1.8', marginBottom:'48px'}}>
             Clinical supervision involves meaningful documentation requirements. Supervisio handles the time-consuming parts — transcription, organization, and form completion — so supervisors can focus on what matters most: the supervisory relationship.
           </p>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'20px'}}>
+          <div className="l-grid-3" style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'20px'}}>
             {[
               {icon:'🎙', label:'Automatic transcription', desc:'Session recordings are transcribed with speaker identification'},
               {icon:'📋', label:'Form auto-completion', desc:'Supervision form fields are filled based on session content'},
@@ -303,11 +320,11 @@ function LandingPage() {
       </div>
 
       {/* How it works */}
-      <div id="how" style={{background:'white', padding:'90px 60px', textAlign:'center'}}>
+      <div id="how" className="l-section" style={{background:'white', padding:'90px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'800px', margin:'0 auto'}}>
           <div style={{fontSize:'12px', color:'#2D7A52', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'16px'}}>How it works</div>
-          <h2 style={{fontSize:'36px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'56px'}}>Simple from start to finish</h2>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'32px'}}>
+          <h2 className="l-h2" style={{fontSize:'36px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'56px'}}>Simple from start to finish</h2>
+          <div className="l-steps" style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'32px'}}>
             {[
               {step:'01', title:'Upload your form', desc:'Start by uploading your program\'s supervision form. Supervisio reads the fields and learns what information to capture.'},
               {step:'02', title:'Add a session recording', desc:'After each supervision session, upload the recording. Supervisio transcribes it and identifies each participant.'},
@@ -325,13 +342,13 @@ function LandingPage() {
       </div>
 
       {/* Features */}
-      <div style={{background:'#1A3C2E', padding:'90px 60px'}}>
+      <div className="l-section" style={{background:'#1A3C2E', padding:'90px 60px'}}>
         <div style={{maxWidth:'900px', margin:'0 auto'}}>
           <div style={{textAlign:'center', marginBottom:'56px'}}>
             <div style={{fontSize:'12px', color:'#6BCF94', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'16px'}}>Capabilities</div>
-            <h2 style={{fontSize:'36px', fontWeight:'700', color:'white', letterSpacing:'-0.8px'}}>Built for clinical practice</h2>
+            <h2 className="l-h2" style={{fontSize:'36px', fontWeight:'700', color:'white', letterSpacing:'-0.8px'}}>Built for clinical practice</h2>
           </div>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'20px'}}>
+          <div className="l-grid-2" style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'20px'}}>
             {[
               {icon:'🎙', title:'Session transcription', desc:'Supports Zoom, Teams, and standard audio/video formats. Speaker identification included.'},
               {icon:'📋', title:'Custom form support', desc:'Upload your program\'s specific supervision form. Fields are detected and filled accordingly.'},
@@ -351,9 +368,9 @@ function LandingPage() {
       </div>
 
       {/* CTA */}
-      <div style={{background:'#EDE8DF', padding:'100px 60px', textAlign:'center'}}>
+      <div className="l-section" style={{background:'#EDE8DF', padding:'100px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'540px', margin:'0 auto'}}>
-          <h2 style={{fontSize:'38px', fontWeight:'800', color:'#1A1614', letterSpacing:'-1px', marginBottom:'18px', lineHeight:'1.15'}}>
+          <h2 className="l-cta-h2" style={{fontSize:'38px', fontWeight:'800', color:'#1A1614', letterSpacing:'-1px', marginBottom:'18px', lineHeight:'1.15'}}>
             Ready to get started?
           </h2>
           <p style={{fontSize:'17px', color:'#6B6259', lineHeight:'1.7', marginBottom:'40px'}}>
@@ -366,7 +383,7 @@ function LandingPage() {
       </div>
 
       {/* Footer */}
-      <div style={{background:'#1A3C2E', padding:'32px 60px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+      <div className="l-footer" style={{background:'#1A3C2E', padding:'32px 60px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div style={{fontSize:'16px', fontWeight:'700', color:'white'}}>Supervisio</div>
         <div style={{fontSize:'13px', color:'#6B9B82'}}>Clinical supervision documentation, simplified</div>
       </div>
