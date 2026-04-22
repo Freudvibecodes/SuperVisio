@@ -10,6 +10,7 @@ type Session = {
   zoom_link: string
   recording_url: string
   transcript_id: string
+  form_template_id: string
   students: string[]
   status: 'scheduled' | 'live' | 'complete' | 'processing' | 'failed'
 }
@@ -53,6 +54,7 @@ export default function Home() {
   const [showNewStudent, setShowNewStudent] = useState(false)
   const [supervisor, setSupervisor] = useState<Supervisor | null>(null)
   const [loading, setLoading] = useState(true)
+  const [darkMode, setDarkMode] = useState(false)
 
   useEffect(() => { checkUser() }, [])
 
@@ -92,20 +94,17 @@ export default function Home() {
       .order('created_at', { ascending: false })
     if (data) setGeneratedForms(data)
   }
-const setupRealtime = (userId: string) => {
+
+  const setupRealtime = (userId: string) => {
     supabase
       .channel('generated_forms_changes')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'generated_forms' },
-        async () => {
-          await loadGeneratedForms(userId)
-        }
+        async () => { await loadGeneratedForms(userId) }
       )
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'sessions' },
-        async () => {
-          await loadSessions(userId)
-        }
+        async () => { await loadSessions(userId) }
       )
       .subscribe()
   }
@@ -115,74 +114,102 @@ const setupRealtime = (userId: string) => {
     window.location.href = '/auth'
   }
 
+  const d = darkMode
+
+  const theme = {
+    sidebar: d ? '#0D1F17' : '#1A3C2E',
+    sidebarHover: d ? '#1A3C2E' : '#234D3A',
+    sidebarActive: d ? '#2D5A42' : '#2D5A42',
+    sidebarText: '#A8C5B5',
+    sidebarTextActive: '#FFFFFF',
+    sidebarBorder: 'rgba(255,255,255,0.08)',
+    bg: d ? '#0F1A14' : '#F5F0E8',
+    surface: d ? '#162119' : '#FFFFFF',
+    surface2: d ? '#1C2D23' : '#F9F5EE',
+    border: d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    border2: d ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.14)',
+    text: d ? '#F0EBE1' : '#1C1917',
+    text2: d ? '#A8C5B5' : '#57534E',
+    text3: d ? '#6B9B82' : '#78716C',
+    accent: '#2D7A52',
+    accentLight: d ? '#1A3C2E' : '#E8F5EE',
+    accentText: d ? '#6BCF94' : '#1A5C35',
+    gold: '#C9A84C',
+    goldLight: d ? '#2A2210' : '#FDF6E3',
+    rose: '#9D3B5B',
+    roseLight: d ? '#2A1020' : '#FDF2F6',
+  }
+
   if (loading) {
     return (
-      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#F9F7F4', fontFamily:'system-ui'}}>
-        <div style={{color:'#57534E', fontSize:'14px'}}>Loading...</div>
+      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background: theme.bg, fontFamily:'system-ui'}}>
+        <div style={{color: theme.text3, fontSize:'14px'}}>Loading...</div>
       </div>
     )
   }
 
+  const NavItem = ({ id, label, badge }: { id: string, label: string, badge?: number }) => (
+    <button onClick={() => setPage(id)} style={{display:'flex', alignItems:'center', width:'100%', padding:'9px 12px', borderRadius:'8px', border:'none', background: page===id ? theme.sidebarActive : 'transparent', color: page===id ? theme.sidebarTextActive : theme.sidebarText, fontSize:'13.5px', fontWeight: page===id ? '500' : '400', cursor:'pointer', marginBottom:'2px', textAlign:'left', transition:'all 0.15s'}}>
+      {label}
+      {badge && badge > 0 ? <span style={{marginLeft:'auto', background:'#C9A84C', color:'#1C1917', fontSize:'10px', padding:'1px 7px', borderRadius:'10px', fontWeight:'700'}}>{badge}</span> : null}
+    </button>
+  )
+
   return (
-    <div style={{display:'flex', minHeight:'100vh', fontFamily:'system-ui, sans-serif', background:'#F9F7F4', color:'#1C1917'}}>
-      <aside style={{width:'230px', background:'white', borderRight:'1px solid #E8E3DB', display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', top:0, left:0, bottom:0}}>
-        <div style={{padding:'22px 20px 18px', borderBottom:'1px solid #E8E3DB'}}>
-          <div style={{fontSize:'18px', fontWeight:'600', color:'#1C1917', display:'flex', alignItems:'center', gap:'8px'}}>
-            <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#2D5A42'}}></div>
-            Supervisio
-          </div>
-          <div style={{fontSize:'11px', color:'#78716C', marginTop:'3px'}}>Clinical supervision, simplified</div>
+    <div style={{display:'flex', minHeight:'100vh', fontFamily:'system-ui, sans-serif', background: theme.bg, color: theme.text}}>
+      <aside style={{width:'240px', background: theme.sidebar, display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', top:0, left:0, bottom:0}}>
+        <div style={{padding:'24px 20px 20px', borderBottom:`1px solid ${theme.sidebarBorder}`}}>
+          <div style={{fontSize:'20px', fontWeight:'700', color:'#FFFFFF', letterSpacing:'-0.3px'}}>Supervisio</div>
+          <div style={{fontSize:'11px', color: theme.sidebarText, marginTop:'3px', letterSpacing:'0.3px'}}>Clinical supervision, simplified</div>
         </div>
-        <nav style={{flex:1, padding:'12px 10px', overflowY:'auto'}}>
-          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.8px', color:'#78716C', padding:'8px 10px 4px', fontWeight:'600'}}>Workspace</div>
-          {[
-            {id:'dashboard', label:'Overview'},
-            {id:'sessions', label:'Sessions'},
-            {id:'reports', label:'Ready to review'},
-            {id:'forms', label:'Form templates'},
-          ].map(item => (
-            <button key={item.id} onClick={() => setPage(item.id)} style={{display:'flex', alignItems:'center', width:'100%', padding:'8px 10px', borderRadius:'7px', border:'none', background: page===item.id ? '#EBF3EE' : 'none', color: page===item.id ? '#1C5C3E' : '#44403C', fontSize:'13.5px', fontWeight: page===item.id ? '500' : '400', cursor:'pointer', marginBottom:'1px', textAlign:'left'}}>
-              {item.label}
-              {item.id === 'reports' && generatedForms.filter(f => f.status === 'pending').length > 0 && (
-                <span style={{marginLeft:'auto', background:'#7D2A48', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600'}}>
-                  {generatedForms.filter(f => f.status === 'pending').length}
-                </span>
-              )}
-            </button>
-          ))}
-          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.8px', color:'#78716C', padding:'12px 10px 4px', fontWeight:'600'}}>Students</div>
-          <button onClick={() => setPage('students')} style={{display:'flex', alignItems:'center', width:'100%', padding:'8px 10px', borderRadius:'7px', border:'none', background: page==='students' ? '#EBF3EE' : 'none', color: page==='students' ? '#1C5C3E' : '#44403C', fontSize:'13.5px', fontWeight: page==='students' ? '500' : '400', cursor:'pointer', marginBottom:'1px', textAlign:'left'}}>
-            All students
-          </button>
+
+        <nav style={{flex:1, padding:'14px 10px', overflowY:'auto'}}>
+          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color: theme.sidebarText, padding:'8px 12px 6px', fontWeight:'600', opacity:0.6}}>Workspace</div>
+          <NavItem id="dashboard" label="Overview" />
+          <NavItem id="sessions" label="Sessions" />
+          <NavItem id="reports" label="Ready to review" badge={generatedForms.filter(f => f.status === 'pending').length} />
+          <NavItem id="forms" label="Form templates" />
+
+          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color: theme.sidebarText, padding:'14px 12px 6px', fontWeight:'600', opacity:0.6}}>Students</div>
+          <NavItem id="students" label="All students" />
           {students.map(student => (
-            <button key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{display:'flex', alignItems:'center', width:'100%', padding:'7px 10px 7px 22px', borderRadius:'7px', border:'none', background: page===`student-${student.id}` ? '#EBF3EE' : 'none', color: page===`student-${student.id}` ? '#1C5C3E' : '#57534E', fontSize:'12.5px', cursor:'pointer', marginBottom:'1px', textAlign:'left'}}>
+            <button key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{display:'flex', alignItems:'center', width:'100%', padding:'7px 12px 7px 24px', borderRadius:'8px', border:'none', background: page===`student-${student.id}` ? theme.sidebarActive : 'transparent', color: page===`student-${student.id}` ? theme.sidebarTextActive : theme.sidebarText, fontSize:'12.5px', cursor:'pointer', marginBottom:'2px', textAlign:'left', opacity:0.85}}>
               {student.name}
             </button>
           ))}
-          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.8px', color:'#78716C', padding:'12px 10px 4px', fontWeight:'600'}}>Account</div>
-          <button onClick={() => setPage('settings')} style={{display:'flex', alignItems:'center', width:'100%', padding:'8px 10px', borderRadius:'7px', border:'none', background: page==='settings' ? '#EBF3EE' : 'none', color: page==='settings' ? '#1C5C3E' : '#44403C', fontSize:'13.5px', cursor:'pointer', marginBottom:'1px', textAlign:'left'}}>
-            Settings
-          </button>
+
+          <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color: theme.sidebarText, padding:'14px 12px 6px', fontWeight:'600', opacity:0.6}}>Account</div>
+          <NavItem id="settings" label="Settings" />
         </nav>
-        <div style={{padding:'14px 10px', borderTop:'1px solid #E8E3DB'}}>
-          <div style={{display:'flex', alignItems:'center', gap:'10px', padding:'8px 10px'}}>
-            <div style={{width:'34px', height:'34px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px', fontWeight:'600'}}>
-              {supervisor?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'S'}
+
+        <div style={{padding:'12px 10px', borderTop:`1px solid ${theme.sidebarBorder}`}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px'}}>
+            <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+              <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.sidebarActive, color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600'}}>
+                {supervisor?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'S'}
+              </div>
+              <div>
+                <div style={{fontSize:'13px', fontWeight:'500', color:'white'}}>{supervisor?.full_name || 'Supervisor'}</div>
+                <div style={{fontSize:'11px', color: theme.sidebarText, cursor:'pointer'}} onClick={handleSignOut}>Sign out</div>
+              </div>
             </div>
-            <div>
-              <div style={{fontSize:'13px', fontWeight:'500', color:'#1C1917'}}>{supervisor?.full_name || 'Supervisor'}</div>
-              <div style={{fontSize:'11px', color:'#78716C', cursor:'pointer'}} onClick={handleSignOut}>Sign out</div>
-            </div>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{background:'transparent', border:`1px solid ${theme.sidebarBorder}`, borderRadius:'6px', padding:'5px 8px', cursor:'pointer', color: theme.sidebarText, fontSize:'14px'}}
+              title={darkMode ? 'Light mode' : 'Dark mode'}
+            >
+              {darkMode ? '☀' : '☾'}
+            </button>
           </div>
         </div>
       </aside>
 
-      <main style={{marginLeft:'230px', flex:1, padding:'32px 36px'}}>
-        {page === 'dashboard' && <Dashboard sessions={sessions} students={students} generatedForms={generatedForms} setPage={setPage} onNewSession={() => setShowNewSession(true)} supervisor={supervisor} />}
-        {page === 'sessions' && <Sessions sessions={sessions} setSessions={setSessions} forms={forms} onNewSession={() => setShowNewSession(true)} />}
-        {page === 'reports' && <Reports generatedForms={generatedForms} sessions={sessions} setGeneratedForms={setGeneratedForms} />}
-        {page === 'forms' && <Forms forms={forms} setForms={setForms} onUpload={() => setShowUploadForm(true)} />}
-        {page === 'students' && <StudentsPage students={students} sessions={sessions} onNewStudent={() => setShowNewStudent(true)} setPage={setPage} />}
+      <main style={{marginLeft:'240px', flex:1, padding:'32px 40px'}}>
+        {page === 'dashboard' && <Dashboard sessions={sessions} students={students} generatedForms={generatedForms} setPage={setPage} onNewSession={() => setShowNewSession(true)} supervisor={supervisor} theme={theme} />}
+        {page === 'sessions' && <Sessions sessions={sessions} setSessions={setSessions} forms={forms} onNewSession={() => setShowNewSession(true)} theme={theme} />}
+        {page === 'reports' && <Reports generatedForms={generatedForms} sessions={sessions} setGeneratedForms={setGeneratedForms} theme={theme} />}
+        {page === 'forms' && <Forms forms={forms} setForms={setForms} onUpload={() => setShowUploadForm(true)} theme={theme} />}
+        {page === 'students' && <StudentsPage students={students} sessions={sessions} onNewStudent={() => setShowNewStudent(true)} setPage={setPage} theme={theme} />}
         {page.startsWith('student-') && (
           <StudentFile
             student={students.find(s => s.id === page.replace('student-', '')) || null}
@@ -191,14 +218,16 @@ const setupRealtime = (userId: string) => {
               return student ? s.students.includes(student.name) : false
             })}
             generatedForms={generatedForms}
+            theme={theme}
           />
         )}
-        {page === 'settings' && <SettingsPage />}
+        {page === 'settings' && <SettingsPage theme={theme} />}
       </main>
 
       {showNewSession && (
         <NewSessionModal
           onClose={() => setShowNewSession(false)}
+          theme={theme}
           onCreate={async (session) => {
             const { data: { session: authSession } } = await supabase.auth.getSession()
             if (!authSession) return
@@ -216,6 +245,7 @@ const setupRealtime = (userId: string) => {
       {showUploadForm && (
         <UploadFormModal
           onClose={() => setShowUploadForm(false)}
+          theme={theme}
           onUpload={async (form) => {
             const { data: { session: authSession } } = await supabase.auth.getSession()
             if (!authSession) return
@@ -232,6 +262,7 @@ const setupRealtime = (userId: string) => {
       {showNewStudent && (
         <NewStudentModal
           onClose={() => setShowNewStudent(false)}
+          theme={theme}
           onCreate={async (student) => {
             const { data: { session: authSession } } = await supabase.auth.getSession()
             if (!authSession) return
@@ -248,7 +279,7 @@ const setupRealtime = (userId: string) => {
   )
 }
 
-function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, supervisor }: { sessions: Session[], students: Student[], generatedForms: GeneratedForm[], setPage: (p: string) => void, onNewSession: () => void, supervisor: Supervisor | null }) {
+function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, supervisor, theme }: { sessions: Session[], students: Student[], generatedForms: GeneratedForm[], setPage: (p: string) => void, onNewSession: () => void, supervisor: Supervisor | null, theme: Record<string, string> }) {
   const firstName = supervisor?.full_name?.split(' ')[0] || 'there'
   const upcoming = sessions.filter(s => s.status === 'scheduled').slice(0, 3)
   const pendingForms = generatedForms.filter(f => f.status === 'pending')
@@ -259,76 +290,75 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
 
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px'}}>
         <div>
-          <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px'}}>{new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'})}</div>
-          <div style={{fontSize:'28px', fontWeight:'600', color:'#1C1917'}}>{greeting}, {firstName}</div>
-          <div style={{fontSize:'14px', color:'#57534E', marginTop:'4px'}}>
+          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', letterSpacing:'0.3px'}}>{new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'})}</div>
+          <div style={{fontSize:'30px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{greeting}, {firstName}</div>
+          <div style={{fontSize:'14px', color: theme.text2, marginTop:'5px'}}>
             {todaySessions.length > 0 ? `${todaySessions.length} session${todaySessions.length > 1 ? 's' : ''} today` : 'No sessions today'}
             {pendingForms.length > 0 ? ` · ${pendingForms.length} form${pendingForms.length > 1 ? 's' : ''} awaiting review` : ''}
           </div>
         </div>
-        <button onClick={onNewSession} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>+ New session</button>
+        <button onClick={onNewSession} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer', letterSpacing:'0.2px'}}>+ New session</button>
       </div>
 
       {pendingForms.length > 0 && (
-        <div onClick={() => setPage('reports')} style={{background:'#FDF2F6', border:'1px solid #F4C0D1', borderRadius:'10px', padding:'12px 16px', marginBottom:'20px', fontSize:'13px', color:'#7D2A48', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', fontWeight:'500'}}>
+        <div onClick={() => setPage('reports')} style={{background: theme.goldLight, border:`1px solid ${theme.gold}40`, borderLeft:`4px solid ${theme.gold}`, borderRadius:'10px', padding:'13px 16px', marginBottom:'22px', fontSize:'13.5px', color: theme.gold, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', fontWeight:'500'}}>
           <span>📋 {pendingForms.length} form{pendingForms.length > 1 ? 's' : ''} ready for your review and signature</span>
-          <span>→</span>
+          <span style={{fontSize:'16px'}}>→</span>
         </div>
       )}
 
       {sessions.filter(s => s.status === 'processing').length > 0 && (
-        <div style={{background:'#EFF6FF', border:'1px solid #BFDBFE', borderRadius:'10px', padding:'12px 16px', marginBottom:'20px', fontSize:'13px', color:'#1E40AF', display:'flex', alignItems:'center', gap:'10px'}}>
-          <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#3B82F6', flexShrink:0}}></div>
+        <div style={{background: theme.accentLight, border:`1px solid ${theme.accent}40`, borderLeft:`4px solid ${theme.accent}`, borderRadius:'10px', padding:'13px 16px', marginBottom:'22px', fontSize:'13px', color: theme.accentText, display:'flex', alignItems:'center', gap:'10px'}}>
+          <div style={{width:'8px', height:'8px', borderRadius:'50%', background: theme.accent, flexShrink:0}}></div>
           {sessions.filter(s => s.status === 'processing').length} recording{sessions.filter(s => s.status === 'processing').length > 1 ? 's' : ''} being transcribed — forms will appear automatically when ready
         </div>
       )}
 
-      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'28px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'14px', marginBottom:'32px'}}>
         {[
           {label:'Total students', value: students.length.toString()},
           {label:'Total sessions', value: sessions.length.toString()},
           {label:'Hours supervised', value: sessions.filter(s => s.status === 'complete').length.toString()},
           {label:'Forms pending', value: pendingForms.length.toString()},
         ].map(s => (
-          <div key={s.label} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'16px 18px'}}>
-            <div style={{fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#78716C', marginBottom:'8px', fontWeight:'500'}}>{s.label}</div>
-            <div style={{fontSize:'30px', fontWeight:'600', color:'#1C1917', lineHeight:1}}>{s.value}</div>
+          <div key={s.label} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'18px 20px'}}>
+            <div style={{fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px', color: theme.text3, marginBottom:'10px', fontWeight:'600'}}>{s.label}</div>
+            <div style={{fontSize:'32px', fontWeight:'700', color: theme.text, lineHeight:1, letterSpacing:'-1px'}}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1.3fr 0.7fr', gap:'20px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'1.4fr 0.6fr', gap:'22px'}}>
         <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color:'#1C1917', marginBottom:'12px'}}>Student progress</div>
+          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px', letterSpacing:'-0.1px'}}>Student progress</div>
           {students.length === 0 ? (
-            <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'28px', textAlign:'center'}}>
-              <div style={{fontSize:'13px', color:'#78716C'}}>No students yet —</div>
-              <span onClick={() => setPage('students')} style={{fontSize:'13px', color:'#2D5A42', cursor:'pointer', fontWeight:'500'}}>add your first student</span>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'32px', textAlign:'center'}}>
+              <div style={{fontSize:'13px', color: theme.text3}}>No students yet — <span onClick={() => setPage('students')} style={{color: theme.accent, cursor:'pointer', fontWeight:'500'}}>add your first student</span></div>
             </div>
           ) : (
-            <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'20px 22px'}}>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'22px 24px'}}>
               {students.map((student, i) => {
                 const studentSessions = sessions.filter(s => s.students.includes(student.name) && s.status === 'complete')
                 const hours = studentSessions.length
                 const percent = Math.round(Math.min((hours / 30) * 100, 100))
                 return (
-                  <div key={student.id} style={{marginBottom: i < students.length - 1 ? '18px' : '0'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px'}}>
-                      <div style={{display:'flex', alignItems:'center', gap:'9px'}}>
-                        <div style={{width:'28px', height:'28px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'600'}}>
+                  <div key={student.id} style={{marginBottom: i < students.length - 1 ? '20px' : '0'}}>
+                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'7px'}}>
+                      <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                        <div style={{width:'30px', height:'30px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontWeight:'700'}}>
                           {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </div>
-                        <span style={{fontSize:'13.5px', fontWeight:'500', cursor:'pointer', color:'#1C1917'}} onClick={() => setPage(`student-${student.id}`)}>{student.name}</span>
+                        <span style={{fontSize:'14px', fontWeight:'500', cursor:'pointer', color: theme.text}} onClick={() => setPage(`student-${student.id}`)}>{student.name}</span>
                       </div>
-                      <span style={{fontSize:'12px', color:'#57534E', fontWeight:'500'}}>{hours} / 30 hrs</span>
+                      <span style={{fontSize:'12px', color: theme.text2, fontWeight:'500'}}>{hours} / 30 hrs</span>
                     </div>
-                    <div style={{height:'6px', background:'#F2EFE9', borderRadius:'3px', overflow:'hidden'}}>
-                      <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D5A42' : percent >= 50 ? '#5A9E7A' : '#D97706', borderRadius:'3px'}}></div>
+                    <div style={{height:'6px', background: theme.surface2, borderRadius:'3px', overflow:'hidden'}}>
+                      <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D7A52' : percent >= 50 ? '#5A9E7A' : '#C9A84C', borderRadius:'3px', transition:'width 0.6s ease'}}></div>
                     </div>
-                    <div style={{fontSize:'11.5px', color:'#78716C', marginTop:'3px'}}>{student.program}</div>
-                    {i < students.length - 1 && <div style={{height:'1px', background:'#F2EFE9', margin:'16px 0 0'}}></div>}
+                    <div style={{fontSize:'11.5px', color: theme.text3, marginTop:'4px'}}>{student.program}</div>
+                    {i < students.length - 1 && <div style={{height:'1px', background: theme.border, margin:'18px 0 0'}}></div>}
                   </div>
                 )
               })}
@@ -337,18 +367,18 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
         </div>
 
         <div>
-          <div style={{fontSize:'14px', fontWeight:'600', color:'#1C1917', marginBottom:'12px'}}>Upcoming sessions</div>
+          <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px', letterSpacing:'-0.1px'}}>Upcoming</div>
           {upcoming.length === 0 ? (
-            <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'28px', textAlign:'center'}}>
-              <div style={{fontSize:'13px', color:'#78716C'}}>No upcoming sessions</div>
-              <span onClick={onNewSession} style={{fontSize:'13px', color:'#2D5A42', cursor:'pointer', fontWeight:'500', display:'block', marginTop:'4px'}}>schedule one</span>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'32px', textAlign:'center'}}>
+              <div style={{fontSize:'13px', color: theme.text3}}>No upcoming sessions</div>
+              <span onClick={onNewSession} style={{fontSize:'13px', color: theme.accent, cursor:'pointer', fontWeight:'500', display:'block', marginTop:'4px'}}>schedule one</span>
             </div>
           ) : (
             upcoming.map(s => (
-              <div key={s.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'14px 16px', marginBottom:'8px'}}>
-                <div style={{fontSize:'13.5px', fontWeight:'500', color:'#1C1917', marginBottom:'3px'}}>{s.name}</div>
-                <div style={{fontSize:'12px', color:'#57534E'}}>{s.date} · {s.time}</div>
-                <div style={{fontSize:'12px', color:'#78716C', marginTop:'2px'}}>{s.students.join(', ')}</div>
+              <div key={s.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'14px 16px', marginBottom:'10px'}}>
+                <div style={{fontSize:'13.5px', fontWeight:'500', color: theme.text, marginBottom:'4px'}}>{s.name}</div>
+                <div style={{fontSize:'12px', color: theme.text2}}>{s.date} · {s.time}</div>
+                <div style={{fontSize:'12px', color: theme.text3, marginTop:'2px'}}>{s.students.join(', ')}</div>
               </div>
             ))
           )}
@@ -358,12 +388,12 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
   )
 }
 
-function Sessions({ sessions, setSessions, forms, onNewSession }: { sessions: Session[], setSessions: (s: Session[]) => void, forms: FormTemplate[], onNewSession: () => void }) {
+function Sessions({ sessions, setSessions, forms, onNewSession, theme }: { sessions: Session[], setSessions: (s: Session[]) => void, forms: FormTemplate[], onNewSession: () => void, theme: Record<string, string> }) {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
-const [recordingUrl, setRecordingUrl] = useState('')
-const [selectedFile, setSelectedFile] = useState<File | null>(null)
-const [processing, setProcessing] = useState<string | null>(null)
-const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [recordingUrl, setRecordingUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this session?')) return
@@ -372,32 +402,17 @@ const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   }
 
   const handleUploadRecording = async (sessionId: string) => {
-    if (!recordingUrl && !selectedFile) {
-      alert('Please enter a recording URL or select a file')
-      return
-    }
+    if (!recordingUrl && !selectedFile) { alert('Please enter a recording URL or select a file'); return }
+    if (!selectedTemplateId && forms.length > 0) { alert('Please select a form template'); setProcessing(null); return }
     setProcessing(sessionId)
 
     try {
-      if (!selectedTemplateId && forms.length > 0) {
-      alert('Please select a form template')
-      setProcessing(null)
-      return
-    }
-const formData = new FormData()
-formData.append('sessionId', sessionId)
-formData.append('templateId', selectedTemplateId)
-      if (selectedFile) {
-        formData.append('file', selectedFile)
-      } else {
-        formData.append('recordingUrl', recordingUrl)
-      }
+      const formData = new FormData()
+      formData.append('sessionId', sessionId)
+      formData.append('templateId', selectedTemplateId)
+      if (selectedFile) { formData.append('file', selectedFile) } else { formData.append('recordingUrl', recordingUrl) }
 
-      const response = await fetch('/api/process-recording', {
-        method: 'POST',
-        body: formData,
-      })
-
+      const response = await fetch('/api/process-recording', { method: 'POST', body: formData })
       const data = await response.json()
 
       if (data.success) {
@@ -405,132 +420,91 @@ formData.append('templateId', selectedTemplateId)
         setUploadingFor(null)
         setRecordingUrl('')
         setSelectedFile(null)
+        setSelectedTemplateId('')
         alert('Recording submitted! Your forms will be ready within 15-20 minutes.')
       } else {
         alert('Submission failed: ' + (data.error || 'Unknown error'))
       }
-    } catch {
-      alert('Submission failed. Please try again.')
-    }
+    } catch { alert('Submission failed. Please try again.') }
 
     setProcessing(null)
   }
 
   const statusConfig: Record<string, { bg: string, color: string, label: string }> = {
-    scheduled: { bg: '#FEF3C7', color: '#92400E', label: 'Scheduled' },
-    processing: { bg: '#EFF6FF', color: '#1E40AF', label: 'Processing' },
-    complete: { bg: '#EBF3EE', color: '#1C5C3E', label: 'Complete' },
-    live: { bg: '#EBF3EE', color: '#1C5C3E', label: 'Live' },
-    failed: { bg: '#FEF2F2', color: '#991B1B', label: 'Failed' },
+    scheduled: { bg: theme.goldLight, color: theme.gold, label: 'Scheduled' },
+    processing: { bg: theme.accentLight, color: theme.accentText, label: 'Processing' },
+    complete: { bg: theme.accentLight, color: theme.accentText, label: 'Complete' },
+    live: { bg: theme.accentLight, color: theme.accentText, label: 'Live' },
+    failed: { bg: theme.roseLight, color: theme.rose, label: 'Failed' },
   }
 
-  const indicatorConfig: Record<string, string> = {
-    scheduled: '#D97706',
-    processing: '#3B82F6',
-    complete: '#2D5A42',
+  const indicatorColor: Record<string, string> = {
+    scheduled: theme.gold,
+    processing: theme.accent,
+    complete: '#2D7A52',
     live: '#5A9E7A',
-    failed: '#EF4444',
+    failed: theme.rose,
   }
 
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px'}}>
         <div>
-          <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>All sessions</div>
-          <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>Sessions</div>
+          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>All sessions</div>
+          <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>Sessions</div>
         </div>
-        <button onClick={onNewSession} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>+ New session</button>
+        <button onClick={onNewSession} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>+ New session</button>
       </div>
       {sessions.length === 0 ? (
-        <EmptyState message="No sessions yet" sub="Sessions you create will appear here" action="Create your first session" onAction={onNewSession} />
+        <EmptyState message="No sessions yet" sub="Sessions you create will appear here" action="Create your first session" onAction={onNewSession} theme={theme} />
       ) : (
         sessions.map(s => (
           <div key={s.id}>
-            <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'14px', marginBottom: uploadingFor === s.id ? '0' : '10px', borderBottomLeftRadius: uploadingFor === s.id ? '0' : '10px', borderBottomRightRadius: uploadingFor === s.id ? '0' : '10px'}}>
-              <div style={{width:'3px', height:'44px', borderRadius:'2px', background: indicatorConfig[s.status] || '#D97706', flexShrink:0}}></div>
+            <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 20px', display:'flex', alignItems:'center', gap:'14px', marginBottom: uploadingFor === s.id ? '0' : '10px', borderBottomLeftRadius: uploadingFor === s.id ? '0' : '12px', borderBottomRightRadius: uploadingFor === s.id ? '0' : '12px'}}>
+              <div style={{width:'3px', height:'46px', borderRadius:'2px', background: indicatorColor[s.status] || theme.gold, flexShrink:0}}></div>
               <div style={{flex:1}}>
-                <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{s.name}</div>
-                <div style={{fontSize:'12.5px', color:'#57534E', marginTop:'2px'}}>{s.date} · {s.time} · {s.students.join(', ')}</div>
-                {s.status === 'processing' && (
-                  <div style={{fontSize:'11.5px', color:'#1E40AF', marginTop:'3px'}}>Transcribing recording — forms will appear in Ready to review when done</div>
-                )}
-                {s.status === 'failed' && (
-                  <div style={{fontSize:'11.5px', color:'#991B1B', marginTop:'3px'}}>Processing failed — please try uploading the recording again</div>
-                )}
+                <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{s.name}</div>
+                <div style={{fontSize:'12.5px', color: theme.text2, marginTop:'2px'}}>{s.date} · {s.time} · {s.students.join(', ')}</div>
+                {s.status === 'processing' && <div style={{fontSize:'11.5px', color: theme.accentText, marginTop:'3px'}}>Transcribing — forms will appear automatically when ready</div>}
+                {s.status === 'failed' && <div style={{fontSize:'11.5px', color: theme.rose, marginTop:'3px'}}>Processing failed — try uploading the recording again</div>}
               </div>
-              <span style={{fontSize:'11.5px', padding:'4px 10px', borderRadius:'20px', fontWeight:'500', background: statusConfig[s.status]?.bg || '#FEF3C7', color: statusConfig[s.status]?.color || '#92400E'}}>
+              <span style={{fontSize:'11.5px', padding:'4px 12px', borderRadius:'20px', fontWeight:'600', background: statusConfig[s.status]?.bg || theme.goldLight, color: statusConfig[s.status]?.color || theme.gold}}>
                 {statusConfig[s.status]?.label || s.status}
               </span>
               {(s.status === 'scheduled' || s.status === 'failed') && (
-                <button onClick={() => setUploadingFor(uploadingFor === s.id ? null : s.id)} style={{background:'#EBF3EE', border:'none', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#1C5C3E', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
+                <button onClick={() => setUploadingFor(uploadingFor === s.id ? null : s.id)} style={{background: theme.accentLight, border:'none', borderRadius:'8px', padding:'7px 14px', fontSize:'12.5px', color: theme.accentText, cursor:'pointer', fontWeight:'600', whiteSpace:'nowrap'}}>
                   + Add recording
                 </button>
               )}
-              <button onClick={() => handleDelete(s.id)} style={{background:'none', border:'none', cursor:'pointer', color:'#A8A29E', padding:'4px', borderRadius:'4px', flexShrink:0}} title="Delete session">
-                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 16 16">
-                  <polyline points="2,4 14,4"/>
-                  <path d="M5 4V2h6v2"/>
-                  <path d="M3 4l1 10h8l1-10"/>
-                </svg>
+              <button onClick={() => handleDelete(s.id)} style={{background:'none', border:'none', cursor:'pointer', color: theme.text3, padding:'4px', borderRadius:'4px', flexShrink:0}}>
+                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 16 16"><polyline points="2,4 14,4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 10h8l1-10"/></svg>
               </button>
             </div>
             {uploadingFor === s.id && (
-              <div style={{background:'#F9F7F4', border:'1px solid #E8E3DB', borderTop:'none', borderBottomLeftRadius:'10px', borderBottomRightRadius:'10px', padding:'16px 18px', marginBottom:'10px'}}>
-                <div style={{fontSize:'13px', fontWeight:'500', color:'#1C1917', marginBottom:'10px'}}>Add session recording</div>
-                {forms.length > 0 && (
-  <div style={{marginBottom:'14px'}}>
-    <div style={{fontSize:'12px', color:'#78716C', marginBottom:'6px', fontWeight:'500'}}>Select form template:</div>
-    <select
-      value={selectedTemplateId}
-      onChange={e => setSelectedTemplateId(e.target.value)}
-      style={{width:'100%', padding:'8px 12px', border:'1px solid #D4CFC8', borderRadius:'7px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color:'#1C1917', background:'white'}}
-    >
-      <option value="">Choose a template...</option>
-      {forms.map(f => (
-        <option key={f.id} value={f.id}>{f.name} — {f.fields.length} fields</option>
-      ))}
-    </select>
-  </div>
-)}
-{forms.length === 0 && (
-  <div style={{background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:'7px', padding:'10px 14px', marginBottom:'14px', fontSize:'12.5px', color:'#92400E'}}>
-    No form templates yet — upload one in Form templates first
-  </div>
-)}
-                <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Option 1 — Upload a file directly from your computer:</div>
-                <div
-                  style={{border:'1.5px dashed #D4CFC8', borderRadius:'7px', padding:'16px', textAlign:'center', background:'white', cursor:'pointer', marginBottom:'12px'}}
-                  onClick={() => document.getElementById(`file-input-${s.id}`)?.click()}
-                >
-                  <div style={{fontSize:'13px', color:'#57534E', fontWeight:'500'}}>
-                    {selectedFile ? `✓ ${selectedFile.name}` : 'Click to select recording file'}
+              <div style={{background: theme.surface2, border:`1px solid ${theme.border}`, borderTop:'none', borderBottomLeftRadius:'12px', borderBottomRightRadius:'12px', padding:'18px 20px', marginBottom:'10px'}}>
+                <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Add session recording</div>
+                {forms.length > 0 ? (
+                  <div style={{marginBottom:'14px'}}>
+                    <div style={{fontSize:'12px', color: theme.text2, marginBottom:'6px', fontWeight:'500'}}>Select form template:</div>
+                    <select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)} style={{width:'100%', padding:'9px 12px', border:`1px solid ${theme.border2}`, borderRadius:'8px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface}}>
+                      <option value="">Choose a template...</option>
+                      {forms.map(f => <option key={f.id} value={f.id}>{f.name} — {f.fields.length} fields</option>)}
+                    </select>
                   </div>
-                  <div style={{fontSize:'11.5px', color:'#78716C', marginTop:'2px'}}>MP4, MOV, M4A, MP3, or WAV</div>
-                  <input
-                    id={`file-input-${s.id}`}
-                    type="file"
-                    accept=".mp4,.mov,.m4a,.mp3,.wav"
-                    style={{display:'none'}}
-                    onChange={e => {
-                      const file = e.target.files?.[0]
-                      if (file) { setSelectedFile(file); setRecordingUrl('') }
-                    }}
-                  />
+                ) : (
+                  <div style={{background: theme.goldLight, border:`1px solid ${theme.gold}40`, borderRadius:'8px', padding:'10px 14px', marginBottom:'14px', fontSize:'12.5px', color: theme.gold}}>
+                    No form templates yet — upload one in Form templates first
+                  </div>
+                )}
+                <div style={{fontSize:'12px', color: theme.text2, marginBottom:'8px', fontWeight:'500'}}>Upload recording file:</div>
+                <div style={{border:`1.5px dashed ${theme.border2}`, borderRadius:'8px', padding:'18px', textAlign:'center', background: theme.surface, cursor:'pointer', marginBottom:'12px'}} onClick={() => document.getElementById(`file-input-${s.id}`)?.click()}>
+                  <div style={{fontSize:'13px', color: theme.text2, fontWeight:'500'}}>{selectedFile ? `✓ ${selectedFile.name}` : 'Click to select recording file'}</div>
+                  <div style={{fontSize:'11.5px', color: theme.text3, marginTop:'2px'}}>MP4, MOV, M4A, MP3, or WAV</div>
+                  <input id={`file-input-${s.id}`} type="file" accept=".mp4,.mov,.m4a,.mp3,.wav" style={{display:'none'}} onChange={e => { const file = e.target.files?.[0]; if (file) { setSelectedFile(file); setRecordingUrl('') } }} />
                 </div>
-                <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Option 2 — Paste a direct recording link:</div>
-                <div style={{display:'flex', gap:'8px', marginBottom:'12px'}}>
-                  <input
-                    value={recordingUrl}
-                    onChange={e => { setRecordingUrl(e.target.value); setSelectedFile(null) }}
-                    placeholder="Paste direct audio/video URL..."
-                    style={{flex:1, padding:'8px 12px', border:'1px solid #D4CFC8', borderRadius:'7px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color:'#1C1917'}}
-                  />
-                </div>
-                <button
-                  onClick={() => handleUploadRecording(s.id)}
-                  disabled={processing === s.id}
-                  style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'7px', padding:'9px 18px', fontSize:'13px', fontWeight:'500', cursor:'pointer', opacity: processing === s.id ? 0.7 : 1}}
-                >
+                <div style={{fontSize:'12px', color: theme.text2, marginBottom:'8px', fontWeight:'500'}}>Or paste a direct link:</div>
+                <input value={recordingUrl} onChange={e => { setRecordingUrl(e.target.value); setSelectedFile(null) }} placeholder="Paste direct audio/video URL..." style={{width:'100%', padding:'9px 12px', border:`1px solid ${theme.border2}`, borderRadius:'8px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, marginBottom:'12px', boxSizing:'border-box'}} />
+                <button onClick={() => handleUploadRecording(s.id)} disabled={processing === s.id} style={{background: theme.accent, color:'white', border:'none', borderRadius:'8px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer', opacity: processing === s.id ? 0.7 : 1}}>
                   {processing === s.id ? 'Submitting...' : 'Submit recording'}
                 </button>
               </div>
@@ -542,7 +516,7 @@ formData.append('templateId', selectedTemplateId)
   )
 }
 
-function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedForms: GeneratedForm[], sessions: Session[], setGeneratedForms: (f: GeneratedForm[]) => void }) {
+function Reports({ generatedForms, sessions, setGeneratedForms, theme }: { generatedForms: GeneratedForm[], sessions: Session[], setGeneratedForms: (f: GeneratedForm[]) => void, theme: Record<string, string> }) {
   const [selectedForm, setSelectedForm] = useState<GeneratedForm | null>(null)
   const [downloading, setDownloading] = useState(false)
   const pending = generatedForms.filter(f => f.status === 'pending')
@@ -560,15 +534,9 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
       const response = await fetch('/api/export-form', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentName: form.student_name,
-          sessionName,
-          formData: form.form_data,
-        }),
+        body: JSON.stringify({ studentName: form.student_name, sessionName, formData: form.form_data }),
       })
-
       if (!response.ok) throw new Error('Export failed')
-
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -576,48 +544,40 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
       a.download = `${form.student_name}-supervision-form.docx`
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      alert('Download failed. Please try again.')
-    }
+    } catch { alert('Download failed. Please try again.') }
     setDownloading(false)
   }
 
-  const getSessionName = (sessionId: string) => {
-    return sessions.find(s => s.id === sessionId)?.name || 'Session'
-  }
+  const getSessionName = (sessionId: string) => sessions.find(s => s.id === sessionId)?.name || 'Session'
 
   if (selectedForm) {
     return (
       <div>
-        <button onClick={() => setSelectedForm(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#57534E', fontSize:'13.5px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px', padding:0}}>
+        <button onClick={() => setSelectedForm(null)} style={{background:'none', border:'none', cursor:'pointer', color: theme.text2, fontSize:'13.5px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px', padding:0}}>
           ← Back to forms
         </button>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
           <div>
-            <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>{getSessionName(selectedForm.session_id)}</div>
-            <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>{selectedForm.student_name}</div>
-            <div style={{fontSize:'13.5px', color:'#57534E', marginTop:'3px'}}>Auto-filled supervision form — review, download or sign off</div>
+            <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>{getSessionName(selectedForm.session_id)}</div>
+            <div style={{fontSize:'26px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{selectedForm.student_name}</div>
+            <div style={{fontSize:'13.5px', color: theme.text2, marginTop:'3px'}}>Auto-filled supervision form — review, download or sign off</div>
           </div>
           <div style={{display:'flex', gap:'10px'}}>
-            <button
-              onClick={() => handleDownload(selectedForm)}
-              disabled={downloading}
-              style={{background:'white', color:'#2D5A42', border:'1px solid #2D5A42', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer', opacity: downloading ? 0.7 : 1}}
-            >
+            <button onClick={() => handleDownload(selectedForm)} disabled={downloading} style={{background: theme.surface, color: theme.accent, border:`1.5px solid ${theme.accent}`, borderRadius:'9px', padding:'10px 18px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer', opacity: downloading ? 0.7 : 1}}>
               {downloading ? 'Preparing...' : '↓ Download Word doc'}
             </button>
             {selectedForm.status === 'pending' && (
-              <button onClick={() => handleSign(selectedForm.id)} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>
+              <button onClick={() => handleSign(selectedForm.id)} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 18px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>
                 ✓ Mark as reviewed
               </button>
             )}
           </div>
         </div>
-        <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'24px 26px'}}>
+        <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'26px 28px'}}>
           {Object.entries(selectedForm.form_data).map(([key, value], i, arr) => (
-            <div key={key} style={{marginBottom: i < arr.length - 1 ? '20px' : '0', paddingBottom: i < arr.length - 1 ? '20px' : '0', borderBottom: i < arr.length - 1 ? '1px solid #F2EFE9' : 'none'}}>
-              <div style={{fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.6px', color:'#78716C', fontWeight:'600', marginBottom:'6px'}}>{key}</div>
-              <div style={{fontSize:'14px', color:'#1C1917', lineHeight:'1.7'}}>{value}</div>
+            <div key={key} style={{marginBottom: i < arr.length - 1 ? '22px' : '0', paddingBottom: i < arr.length - 1 ? '22px' : '0', borderBottom: i < arr.length - 1 ? `1px solid ${theme.border}` : 'none'}}>
+              <div style={{fontSize:'10.5px', textTransform:'uppercase', letterSpacing:'0.8px', color: theme.text3, fontWeight:'700', marginBottom:'7px'}}>{key}</div>
+              <div style={{fontSize:'14.5px', color: theme.text, lineHeight:'1.7'}}>{value}</div>
             </div>
           ))}
         </div>
@@ -627,32 +587,28 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
 
   return (
     <div>
-      <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Documents</div>
-      <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917', marginBottom:'6px'}}>Ready to review</div>
-      <div style={{fontSize:'13.5px', color:'#57534E', marginBottom:'20px'}}>Auto-filled forms — review on screen or download as a Word document</div>
+      <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Documents</div>
+      <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, marginBottom:'6px', letterSpacing:'-0.5px'}}>Ready to review</div>
+      <div style={{fontSize:'13.5px', color: theme.text2, marginBottom:'24px'}}>Auto-filled forms — review on screen or download as a Word document</div>
 
       {pending.length === 0 && signed.length === 0 ? (
-        <EmptyState message="No forms yet" sub="Forms will appear here after session recordings are processed" />
+        <EmptyState message="No forms yet" sub="Forms will appear here after session recordings are processed" theme={theme} />
       ) : (
         <>
           {pending.length > 0 && (
             <>
-              <div style={{fontSize:'13px', fontWeight:'600', color:'#1C1917', marginBottom:'10px'}}>Awaiting review</div>
+              <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'12px'}}>Awaiting review</div>
               {pending.map(f => (
-                <div key={f.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
-                  <div style={{width:'38px', height:'38px', borderRadius:'8px', background:'#FDF2F6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                    <svg width="16" height="16" fill="none" stroke="#7D2A48" strokeWidth="1.5" viewBox="0 0 16 16"><path d="M4 2h8v12H4z"/><line x1="6.5" y1="6" x2="9.5" y2="6"/><line x1="6.5" y1="9" x2="9.5" y2="9"/></svg>
+                <div key={f.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 20px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
+                  <div style={{width:'40px', height:'40px', borderRadius:'9px', background: theme.roseLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                    <svg width="16" height="16" fill="none" stroke={theme.rose} strokeWidth="1.5" viewBox="0 0 16 16"><path d="M4 2h8v12H4z"/><line x1="6.5" y1="6" x2="9.5" y2="6"/><line x1="6.5" y1="9" x2="9.5" y2="9"/></svg>
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{f.student_name}</div>
-                    <div style={{fontSize:'12.5px', color:'#57534E', marginTop:'2px'}}>{getSessionName(f.session_id)}</div>
+                    <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{f.student_name}</div>
+                    <div style={{fontSize:'12.5px', color: theme.text2, marginTop:'2px'}}>{getSessionName(f.session_id)}</div>
                   </div>
-                  <button onClick={() => handleDownload(f)} style={{background:'none', border:'1px solid #E8E3DB', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#57534E', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
-                    ↓ Download
-                  </button>
-                  <button onClick={() => setSelectedForm(f)} style={{background:'#FDF2F6', border:'none', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#7D2A48', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
-                    Review
-                  </button>
+                  <button onClick={() => handleDownload(f)} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'8px', padding:'7px 14px', fontSize:'12.5px', color: theme.text2, cursor:'pointer', fontWeight:'500'}}>↓ Download</button>
+                  <button onClick={() => setSelectedForm(f)} style={{background: theme.roseLight, border:'none', borderRadius:'8px', padding:'7px 14px', fontSize:'12.5px', color: theme.rose, cursor:'pointer', fontWeight:'600'}}>Review</button>
                 </div>
               ))}
             </>
@@ -660,22 +616,18 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
 
           {signed.length > 0 && (
             <>
-              <div style={{fontSize:'13px', fontWeight:'600', color:'#1C1917', margin:'20px 0 10px'}}>Reviewed</div>
+              <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, margin:'22px 0 12px'}}>Reviewed</div>
               {signed.map(f => (
-                <div key={f.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
-                  <div style={{width:'38px', height:'38px', borderRadius:'8px', background:'#EBF3EE', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                    <svg width="16" height="16" fill="none" stroke="#1C5C3E" strokeWidth="1.5" viewBox="0 0 16 16"><polyline points="3,8 6.5,11.5 13,5"/></svg>
+                <div key={f.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'16px 20px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
+                  <div style={{width:'40px', height:'40px', borderRadius:'9px', background: theme.accentLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                    <svg width="16" height="16" fill="none" stroke={theme.accentText} strokeWidth="1.5" viewBox="0 0 16 16"><polyline points="3,8 6.5,11.5 13,5"/></svg>
                   </div>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{f.student_name}</div>
-                    <div style={{fontSize:'12.5px', color:'#57534E', marginTop:'2px'}}>{getSessionName(f.session_id)}</div>
+                    <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{f.student_name}</div>
+                    <div style={{fontSize:'12.5px', color: theme.text2, marginTop:'2px'}}>{getSessionName(f.session_id)}</div>
                   </div>
-                  <button onClick={() => handleDownload(f)} style={{background:'none', border:'1px solid #E8E3DB', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#57534E', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
-                    ↓ Download
-                  </button>
-                  <button onClick={() => setSelectedForm(f)} style={{background:'none', border:'1px solid #E8E3DB', borderRadius:'7px', padding:'6px 12px', fontSize:'12px', color:'#57534E', cursor:'pointer', fontWeight:'500', whiteSpace:'nowrap'}}>
-                    View
-                  </button>
+                  <button onClick={() => handleDownload(f)} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'8px', padding:'7px 14px', fontSize:'12.5px', color: theme.text2, cursor:'pointer', fontWeight:'500'}}>↓ Download</button>
+                  <button onClick={() => setSelectedForm(f)} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'8px', padding:'7px 14px', fontSize:'12.5px', color: theme.text2, cursor:'pointer', fontWeight:'500'}}>View</button>
                 </div>
               ))}
             </>
@@ -686,7 +638,7 @@ function Reports({ generatedForms, sessions, setGeneratedForms }: { generatedFor
   )
 }
 
-function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms: (f: FormTemplate[]) => void, onUpload: () => void }) {
+function Forms({ forms, setForms, onUpload, theme }: { forms: FormTemplate[], setForms: (f: FormTemplate[]) => void, onUpload: () => void, theme: Record<string, string> }) {
   const [selectedForm, setSelectedForm] = useState<FormTemplate | null>(null)
 
   const handleDelete = async (id: string) => {
@@ -698,25 +650,21 @@ function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms:
   if (selectedForm) {
     return (
       <div>
-        <button onClick={() => setSelectedForm(null)} style={{background:'none', border:'none', cursor:'pointer', color:'#57534E', fontSize:'13.5px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px', padding:0}}>
+        <button onClick={() => setSelectedForm(null)} style={{background:'none', border:'none', cursor:'pointer', color: theme.text2, fontSize:'13.5px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'6px', padding:0}}>
           ← Back to templates
         </button>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
-          <div>
-            <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Form template</div>
-            <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>{selectedForm.name}</div>
-            <div style={{fontSize:'13.5px', color:'#57534E', marginTop:'3px'}}>{selectedForm.fields.length} fields detected</div>
-          </div>
+        <div style={{marginBottom:'24px'}}>
+          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Form template</div>
+          <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{selectedForm.name}</div>
+          <div style={{fontSize:'13.5px', color: theme.text2, marginTop:'3px'}}>{selectedForm.fields.length} fields detected</div>
         </div>
-        <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'24px 26px'}}>
-          <div style={{fontSize:'13px', fontWeight:'600', color:'#1C1917', marginBottom:'16px'}}>Detected fields</div>
+        <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'24px 26px'}}>
+          <div style={{fontSize:'13px', fontWeight:'600', color: theme.text, marginBottom:'16px'}}>Detected fields</div>
           {selectedForm.fields.map((field, i) => (
-            <div key={i} style={{display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i < selectedForm.fields.length - 1 ? '1px solid #F2EFE9' : 'none'}}>
-              <div style={{width:'24px', height:'24px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', flexShrink:0}}>
-                {i + 1}
-              </div>
-              <div style={{fontSize:'14px', color:'#1C1917', flex:1}}>{field}</div>
-              <div style={{fontSize:'11.5px', color:'#78716C', background:'#F9F7F4', padding:'3px 10px', borderRadius:'20px'}}>AI will fill this</div>
+            <div key={i} style={{display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i < selectedForm.fields.length - 1 ? `1px solid ${theme.border}` : 'none'}}>
+              <div style={{width:'26px', height:'26px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'700', flexShrink:0}}>{i + 1}</div>
+              <div style={{fontSize:'14px', color: theme.text, flex:1}}>{field}</div>
+              <div style={{fontSize:'11.5px', color: theme.text3, background: theme.surface2, padding:'3px 10px', borderRadius:'20px'}}>AI will fill this</div>
             </div>
           ))}
         </div>
@@ -726,30 +674,30 @@ function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms:
 
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px'}}>
         <div>
-          <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Templates</div>
-          <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>Form templates</div>
-          <div style={{fontSize:'13.5px', color:'#57534E', marginTop:'3px'}}>Upload your supervision form — Supervisio reads the fields and fills them automatically</div>
+          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Templates</div>
+          <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>Form templates</div>
+          <div style={{fontSize:'13.5px', color: theme.text2, marginTop:'3px'}}>Upload your supervision form — Supervisio reads the fields and fills them automatically</div>
         </div>
-        <button onClick={onUpload} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>+ Upload form</button>
+        <button onClick={onUpload} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>+ Upload form</button>
       </div>
       {forms.length === 0 ? (
-        <EmptyState message="No form templates yet" sub="Upload your supervision form and Supervisio will learn what to fill in" action="Upload a form" onAction={onUpload} />
+        <EmptyState message="No form templates yet" sub="Upload your supervision form and Supervisio will learn what to fill in" action="Upload a form" onAction={onUpload} theme={theme} />
       ) : (
         <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'14px'}}>
           {forms.map(f => (
-            <div key={f.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'18px 20px', cursor:'pointer'}} onClick={() => setSelectedForm(f)}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px'}}>
-                <div style={{width:'36px', height:'36px', borderRadius:'8px', background:'#EBF3EE', display:'flex', alignItems:'center', justifyContent:'center'}}>
-                  <svg width="16" height="16" fill="none" stroke="#1C5C3E" strokeWidth="1.5" viewBox="0 0 16 16"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/></svg>
+            <div key={f.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'20px 22px', cursor:'pointer'}} onClick={() => setSelectedForm(f)}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'14px'}}>
+                <div style={{width:'38px', height:'38px', borderRadius:'9px', background: theme.accentLight, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                  <svg width="16" height="16" fill="none" stroke={theme.accentText} strokeWidth="1.5" viewBox="0 0 16 16"><path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z"/><polyline points="9,2 9,6 13,6"/></svg>
                 </div>
-                <button onClick={e => { e.stopPropagation(); handleDelete(f.id) }} style={{background:'none', border:'none', cursor:'pointer', color:'#A8A29E', padding:'2px'}}>
+                <button onClick={e => { e.stopPropagation(); handleDelete(f.id) }} style={{background:'none', border:'none', cursor:'pointer', color: theme.text3, padding:'2px'}}>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 16 16"><polyline points="2,4 14,4"/><path d="M5 4V2h6v2"/><path d="M3 4l1 10h8l1-10"/></svg>
                 </button>
               </div>
-              <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917', marginBottom:'3px'}}>{f.name}</div>
-              <div style={{fontSize:'12px', color:'#78716C'}}>{f.fields.length} fields detected · Click to view</div>
+              <div style={{fontSize:'14px', fontWeight:'500', color: theme.text, marginBottom:'4px'}}>{f.name}</div>
+              <div style={{fontSize:'12px', color: theme.text3}}>{f.fields.length} fields · Click to view</div>
             </div>
           ))}
         </div>
@@ -758,18 +706,18 @@ function Forms({ forms, setForms, onUpload }: { forms: FormTemplate[], setForms:
   )
 }
 
-function StudentsPage({ students, sessions, onNewStudent, setPage }: { students: Student[], sessions: Session[], onNewStudent: () => void, setPage: (p: string) => void }) {
+function StudentsPage({ students, sessions, onNewStudent, setPage, theme }: { students: Student[], sessions: Session[], onNewStudent: () => void, setPage: (p: string) => void, theme: Record<string, string> }) {
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'28px'}}>
         <div>
-          <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>All students</div>
-          <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>Students</div>
+          <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>All students</div>
+          <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>Students</div>
         </div>
-        <button onClick={onNewStudent} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>+ Add student</button>
+        <button onClick={onNewStudent} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>+ Add student</button>
       </div>
       {students.length === 0 ? (
-        <EmptyState message="No students yet" sub="Add your first student to get started" action="Add student" onAction={onNewStudent} />
+        <EmptyState message="No students yet" sub="Add your first student to get started" action="Add student" onAction={onNewStudent} theme={theme} />
       ) : (
         <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'14px'}}>
           {students.map(student => {
@@ -779,26 +727,26 @@ function StudentsPage({ students, sessions, onNewStudent, setPage }: { students:
             const percent = Math.round(Math.min((hours / 30) * 100, 100))
             const nextSession = studentSessions.find(s => s.status === 'scheduled')
             return (
-              <div key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'18px 20px', cursor:'pointer'}}>
-                <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px'}}>
-                  <div style={{width:'40px', height:'40px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'600'}}>
+              <div key={student.id} onClick={() => setPage(`student-${student.id}`)} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'20px 22px', cursor:'pointer'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px'}}>
+                  <div style={{width:'42px', height:'42px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'700'}}>
                     {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </div>
                   <div>
-                    <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{student.name}</div>
-                    <div style={{fontSize:'12px', color:'#78716C'}}>{student.program}</div>
+                    <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{student.name}</div>
+                    <div style={{fontSize:'12px', color: theme.text3}}>{student.program}</div>
                   </div>
                 </div>
                 <div style={{marginBottom:'8px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'5px'}}>
-                    <span style={{fontSize:'12px', color:'#57534E'}}>Supervision hours</span>
-                    <span style={{fontSize:'12px', fontWeight:'500', color:'#1C1917'}}>{hours} / 30</span>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'6px'}}>
+                    <span style={{fontSize:'12px', color: theme.text2}}>Supervision hours</span>
+                    <span style={{fontSize:'12px', fontWeight:'600', color: theme.text}}>{hours} / 30</span>
                   </div>
-                  <div style={{height:'5px', background:'#F2EFE9', borderRadius:'3px', overflow:'hidden'}}>
-                    <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D5A42' : percent >= 50 ? '#5A9E7A' : '#D97706', borderRadius:'3px'}}></div>
+                  <div style={{height:'5px', background: theme.surface2, borderRadius:'3px', overflow:'hidden'}}>
+                    <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D7A52' : percent >= 50 ? '#5A9E7A' : theme.gold, borderRadius:'3px'}}></div>
                   </div>
                 </div>
-                <div style={{fontSize:'12px', color:'#78716C'}}>
+                <div style={{fontSize:'12px', color: theme.text3}}>
                   {nextSession ? `Next: ${nextSession.date} · ${nextSession.time}` : 'No upcoming sessions'}
                 </div>
               </div>
@@ -810,8 +758,8 @@ function StudentsPage({ students, sessions, onNewStudent, setPage }: { students:
   )
 }
 
-function StudentFile({ student, sessions, generatedForms }: { student: Student | null, sessions: Session[], generatedForms: GeneratedForm[] }) {
-  if (!student) return <EmptyState message="Student not found" sub="This student may have been removed" />
+function StudentFile({ student, sessions, generatedForms, theme }: { student: Student | null, sessions: Session[], generatedForms: GeneratedForm[], theme: Record<string, string> }) {
+  if (!student) return <EmptyState message="Student not found" sub="This student may have been removed" theme={theme} />
   const completedSessions = sessions.filter(s => s.status === 'complete')
   const hours = completedSessions.length
   const percent = Math.round(Math.min((hours / 30) * 100, 100))
@@ -819,53 +767,53 @@ function StudentFile({ student, sessions, generatedForms }: { student: Student |
 
   return (
     <div>
-      <div style={{display:'flex', alignItems:'center', gap:'16px', marginBottom:'28px'}}>
-        <div style={{width:'52px', height:'52px', borderRadius:'50%', background:'#EBF3EE', color:'#1C5C3E', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', fontWeight:'600'}}>
+      <div style={{display:'flex', alignItems:'center', gap:'18px', marginBottom:'30px'}}>
+        <div style={{width:'56px', height:'56px', borderRadius:'50%', background: theme.accentLight, color: theme.accentText, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'17px', fontWeight:'700'}}>
           {student.name.split(' ').map(n => n[0]).join('').toUpperCase()}
         </div>
         <div>
-          <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917'}}>{student.name}</div>
-          <div style={{fontSize:'13.5px', color:'#57534E'}}>{student.program}</div>
+          <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, letterSpacing:'-0.5px'}}>{student.name}</div>
+          <div style={{fontSize:'13.5px', color: theme.text2}}>{student.program}</div>
         </div>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'12px', marginBottom:'24px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'14px', marginBottom:'26px'}}>
         {[
           {label:'Hours completed', value:`${hours}`},
           {label:'Hours remaining', value:`${Math.max(30 - hours, 0)}`},
           {label:'Sessions total', value:`${sessions.length}`},
           {label:'Forms generated', value:`${studentForms.length}`},
         ].map(s => (
-          <div key={s.label} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'16px 18px'}}>
-            <div style={{fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#78716C', marginBottom:'8px', fontWeight:'500'}}>{s.label}</div>
-            <div style={{fontSize:'30px', fontWeight:'600', color:'#1C1917', lineHeight:1}}>{s.value}</div>
+          <div key={s.label} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'18px 20px'}}>
+            <div style={{fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px', color: theme.text3, marginBottom:'10px', fontWeight:'600'}}>{s.label}</div>
+            <div style={{fontSize:'32px', fontWeight:'700', color: theme.text, lineHeight:1, letterSpacing:'-1px'}}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'20px 22px', marginBottom:'24px'}}>
-        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>
-          <span style={{fontSize:'13.5px', fontWeight:'500', color:'#1C1917'}}>Progress toward 30 hours</span>
-          <span style={{fontSize:'13.5px', color:'#57534E', fontWeight:'500'}}>{percent}%</span>
+      <div style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'22px 24px', marginBottom:'26px'}}>
+        <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+          <span style={{fontSize:'13.5px', fontWeight:'600', color: theme.text}}>Progress toward 30 hours</span>
+          <span style={{fontSize:'13.5px', color: theme.text2, fontWeight:'500'}}>{percent}%</span>
         </div>
-        <div style={{height:'8px', background:'#F2EFE9', borderRadius:'4px', overflow:'hidden'}}>
-          <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D5A42' : percent >= 50 ? '#5A9E7A' : '#D97706', borderRadius:'4px'}}></div>
+        <div style={{height:'8px', background: theme.surface2, borderRadius:'4px', overflow:'hidden'}}>
+          <div style={{height:'100%', width:`${percent}%`, background: percent >= 80 ? '#2D7A52' : percent >= 50 ? '#5A9E7A' : theme.gold, borderRadius:'4px', transition:'width 0.6s ease'}}></div>
         </div>
-        <div style={{fontSize:'12.5px', color:'#78716C', marginTop:'6px'}}>{hours} of 30 hours completed · {Math.max(30 - hours, 0)} hours remaining</div>
+        <div style={{fontSize:'12.5px', color: theme.text3, marginTop:'7px'}}>{hours} of 30 hours completed · {Math.max(30 - hours, 0)} hours remaining</div>
       </div>
 
-      <div style={{fontSize:'14px', fontWeight:'600', color:'#1C1917', marginBottom:'12px'}}>Session history</div>
+      <div style={{fontSize:'14px', fontWeight:'600', color: theme.text, marginBottom:'14px'}}>Session history</div>
       {sessions.length === 0 ? (
-        <EmptyState message="No sessions yet" sub="Sessions with this student will appear here" />
+        <EmptyState message="No sessions yet" sub="Sessions with this student will appear here" theme={theme} />
       ) : (
         sessions.map(s => (
-          <div key={s.id} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', padding:'14px 18px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
-            <div style={{width:'3px', height:'44px', borderRadius:'2px', background: s.status === 'complete' ? '#2D5A42' : '#D97706', flexShrink:0}}></div>
+          <div key={s.id} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', padding:'14px 20px', display:'flex', alignItems:'center', gap:'14px', marginBottom:'10px'}}>
+            <div style={{width:'3px', height:'46px', borderRadius:'2px', background: s.status === 'complete' ? '#2D7A52' : theme.gold, flexShrink:0}}></div>
             <div style={{flex:1}}>
-              <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{s.name}</div>
-              <div style={{fontSize:'12.5px', color:'#57534E', marginTop:'2px'}}>{s.date} · {s.time}</div>
+              <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{s.name}</div>
+              <div style={{fontSize:'12.5px', color: theme.text2, marginTop:'2px'}}>{s.date} · {s.time}</div>
             </div>
-            <span style={{fontSize:'12px', padding:'4px 10px', borderRadius:'20px', fontWeight:'500', background: s.status === 'complete' ? '#EBF3EE' : '#FEF3C7', color: s.status === 'complete' ? '#1C5C3E' : '#92400E'}}>
+            <span style={{fontSize:'12px', padding:'4px 12px', borderRadius:'20px', fontWeight:'600', background: s.status === 'complete' ? theme.accentLight : theme.goldLight, color: s.status === 'complete' ? theme.accentText : theme.gold}}>
               {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
             </span>
           </div>
@@ -875,23 +823,16 @@ function StudentFile({ student, sessions, generatedForms }: { student: Student |
   )
 }
 
-function SettingsPage() {
-  const [toggles, setToggles] = useState({
-    speakerDetection: true,
-    autoGenerate: true,
-    emailForms: false,
-    reminders: true,
-    formAlerts: true,
-  })
+function SettingsPage({ theme }: { theme: Record<string, string> }) {
+  const [toggles, setToggles] = useState({ autoGenerate: true, emailForms: false, reminders: true, formAlerts: true })
   const toggle = (key: keyof typeof toggles) => setToggles(prev => ({ ...prev, [key]: !prev[key] }))
 
   return (
     <div>
-      <div style={{fontSize:'12px', color:'#78716C', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Account</div>
-      <div style={{fontSize:'26px', fontWeight:'600', color:'#1C1917', marginBottom:'20px'}}>Settings</div>
+      <div style={{fontSize:'12px', color: theme.text3, marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.6px'}}>Account</div>
+      <div style={{fontSize:'28px', fontWeight:'700', color: theme.text, marginBottom:'24px', letterSpacing:'-0.5px'}}>Settings</div>
       {[
         {title:'Processing', items:[
-         
           {key:'autoGenerate', label:'Auto-generate forms after upload', desc:'Forms are drafted as soon as recording is processed'},
           {key:'emailForms', label:'Email draft forms for review', desc:'Receive a copy at your registered email address'},
         ]},
@@ -900,16 +841,16 @@ function SettingsPage() {
           {key:'formAlerts', label:'Form ready alerts', desc:'Notified as soon as forms are ready to review'},
         ]},
       ].map(section => (
-        <div key={section.title} style={{background:'white', border:'1px solid #E8E3DB', borderRadius:'10px', marginBottom:'14px', overflow:'hidden'}}>
-          <div style={{fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.7px', color:'#78716C', fontWeight:'600', padding:'16px 20px 12px', borderBottom:'1px solid #E8E3DB'}}>{section.title}</div>
+        <div key={section.title} style={{background: theme.surface, border:`1px solid ${theme.border}`, borderRadius:'12px', marginBottom:'14px', overflow:'hidden'}}>
+          <div style={{fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.8px', color: theme.text3, fontWeight:'700', padding:'16px 22px 12px', borderBottom:`1px solid ${theme.border}`}}>{section.title}</div>
           {section.items.map((item, i) => (
-            <div key={item.key} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 20px', borderBottom: i < section.items.length - 1 ? '1px solid #F2EFE9' : 'none'}}>
+            <div key={item.key} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 22px', borderBottom: i < section.items.length - 1 ? `1px solid ${theme.border}` : 'none'}}>
               <div>
-                <div style={{fontSize:'14px', fontWeight:'500', color:'#1C1917'}}>{item.label}</div>
-                <div style={{fontSize:'12.5px', color:'#78716C', marginTop:'2px'}}>{item.desc}</div>
+                <div style={{fontSize:'14px', fontWeight:'500', color: theme.text}}>{item.label}</div>
+                <div style={{fontSize:'12.5px', color: theme.text3, marginTop:'2px'}}>{item.desc}</div>
               </div>
-              <div onClick={() => toggle(item.key as keyof typeof toggles)} style={{width:'38px', height:'22px', borderRadius:'11px', background: toggles[item.key as keyof typeof toggles] ? '#2D5A42' : '#D4CFC8', position:'relative', cursor:'pointer', flexShrink:0, transition:'background 0.2s'}}>
-                <div style={{width:'16px', height:'16px', background:'white', borderRadius:'50%', position:'absolute', top:'3px', right: toggles[item.key as keyof typeof toggles] ? '3px' : 'auto', left: toggles[item.key as keyof typeof toggles] ? 'auto' : '3px', transition:'all 0.2s'}}></div>
+              <div onClick={() => toggle(item.key as keyof typeof toggles)} style={{width:'40px', height:'23px', borderRadius:'12px', background: toggles[item.key as keyof typeof toggles] ? theme.accent : theme.border2, position:'relative', cursor:'pointer', flexShrink:0, transition:'background 0.2s'}}>
+                <div style={{width:'17px', height:'17px', background:'white', borderRadius:'50%', position:'absolute', top:'3px', right: toggles[item.key as keyof typeof toggles] ? '3px' : 'auto', left: toggles[item.key as keyof typeof toggles] ? 'auto' : '3px', transition:'all 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}></div>
               </div>
             </div>
           ))}
@@ -919,22 +860,22 @@ function SettingsPage() {
   )
 }
 
-function EmptyState({ message, sub, action, onAction }: { message: string, sub: string, action?: string, onAction?: () => void }) {
+function EmptyState({ message, sub, action, onAction, theme }: { message: string, sub: string, action?: string, onAction?: () => void, theme: Record<string, string> }) {
   return (
-    <div style={{textAlign:'center', padding:'64px 20px'}}>
-      <div style={{width:'48px', height:'48px', borderRadius:'50%', border:'2px solid #E8E3DB', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center'}}>
-        <div style={{width:'8px', height:'8px', borderRadius:'50%', background:'#D4CFC8'}}></div>
+    <div style={{textAlign:'center', padding:'72px 20px'}}>
+      <div style={{width:'52px', height:'52px', borderRadius:'50%', border:`2px solid ${theme.border2}`, margin:'0 auto 18px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+        <div style={{width:'10px', height:'10px', borderRadius:'50%', background: theme.border2}}></div>
       </div>
-      <div style={{fontSize:'15px', fontWeight:'500', color:'#44403C', marginBottom:'6px'}}>{message}</div>
-      <div style={{fontSize:'13.5px', color:'#78716C', marginBottom: action ? '20px' : '0'}}>{sub}</div>
+      <div style={{fontSize:'16px', fontWeight:'600', color: theme.text, marginBottom:'7px'}}>{message}</div>
+      <div style={{fontSize:'13.5px', color: theme.text3, marginBottom: action ? '22px' : '0'}}>{sub}</div>
       {action && onAction && (
-        <button onClick={onAction} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 20px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>{action}</button>
+        <button onClick={onAction} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 22px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>{action}</button>
       )}
     </div>
   )
 }
 
-function NewSessionModal({ onClose, onCreate }: { onClose: () => void, onCreate: (session: Omit<Session, 'id'>) => void }) {
+function NewSessionModal({ onClose, onCreate, theme }: { onClose: () => void, onCreate: (session: Omit<Session, 'id'>) => void, theme: Record<string, string> }) {
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
@@ -942,43 +883,44 @@ function NewSessionModal({ onClose, onCreate }: { onClose: () => void, onCreate:
 
   const handleCreate = () => {
     if (!name || !date || !time) { alert('Please fill in session name, date and time'); return }
-    onCreate({ name, date, time, zoom_link: '', recording_url: '', transcript_id: '', students: students.split(',').map(s => s.trim()).filter(Boolean), status: 'scheduled' })
+    onCreate({ name, date, time, zoom_link: '', recording_url: '', transcript_id: '', form_template_id: '', students: students.split(',').map(s => s.trim()).filter(Boolean), status: 'scheduled' })
     onClose()
   }
 
   return (
-    <div style={{position:'fixed', inset:0, background:'rgba(28,25,23,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={{background:'white', borderRadius:'14px', padding:'28px 30px', width:'460px', maxWidth:'95vw'}}>
-        <div style={{fontSize:'20px', fontWeight:'600', color:'#1C1917', marginBottom:'4px'}}>New supervision session</div>
-        <div style={{fontSize:'13px', color:'#78716C', marginBottom:'24px'}}>Schedule a session and add the recording afterwards</div>
-        <div style={{marginBottom:'16px'}}>
-          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Session name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Group supervision — session 1" style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
-        </div>
-        <div style={{marginBottom:'16px'}}>
-          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Students (comma separated)</label>
-          <input value={students} onChange={e => setStudents(e.target.value)} placeholder="e.g. Maya Adeyemi, Jordan Bassett" style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
-        </div>
+    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{background: theme.surface, borderRadius:'14px', padding:'30px 32px', width:'480px', maxWidth:'95vw', border:`1px solid ${theme.border}`}}>
+        <div style={{fontSize:'21px', fontWeight:'700', color: theme.text, marginBottom:'4px', letterSpacing:'-0.3px'}}>New supervision session</div>
+        <div style={{fontSize:'13px', color: theme.text3, marginBottom:'26px'}}>Schedule a session and add the recording afterwards</div>
+        {[
+          {label:'Session name', value:name, setter:setName, placeholder:'e.g. Group supervision — session 1'},
+          {label:'Students (comma separated)', value:students, setter:setStudents, placeholder:'e.g. Maya Adeyemi, Jordan Bassett'},
+        ].map(field => (
+          <div key={field.label} style={{marginBottom:'16px'}}>
+            <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>{field.label}</label>
+            <input value={field.value} onChange={e => field.setter(e.target.value)} placeholder={field.placeholder} style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
+          </div>
+        ))}
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'16px'}}>
           <div>
-            <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Date</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
+            <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
           </div>
           <div>
-            <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Time</label>
-            <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
+            <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>Time</label>
+            <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
           </div>
         </div>
-        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px', paddingTop:'20px', borderTop:'1px solid #F2EFE9'}}>
-          <button onClick={onClose} style={{background:'none', border:'1px solid #D4CFC8', borderRadius:'8px', padding:'9px 16px', fontSize:'13.5px', cursor:'pointer', color:'#44403C'}}>Cancel</button>
-          <button onClick={handleCreate} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>Create session</button>
+        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'22px', paddingTop:'20px', borderTop:`1px solid ${theme.border}`}}>
+          <button onClick={onClose} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'9px', padding:'10px 18px', fontSize:'13.5px', cursor:'pointer', color: theme.text2}}>Cancel</button>
+          <button onClick={handleCreate} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>Create session</button>
         </div>
       </div>
     </div>
   )
 }
 
-function NewStudentModal({ onClose, onCreate }: { onClose: () => void, onCreate: (student: Omit<Student, 'id' | 'created_at'>) => void }) {
+function NewStudentModal({ onClose, onCreate, theme }: { onClose: () => void, onCreate: (student: Omit<Student, 'id' | 'created_at'>) => void, theme: Record<string, string> }) {
   const [name, setName] = useState('')
   const [program, setProgram] = useState('')
 
@@ -989,28 +931,28 @@ function NewStudentModal({ onClose, onCreate }: { onClose: () => void, onCreate:
   }
 
   return (
-    <div style={{position:'fixed', inset:0, background:'rgba(28,25,23,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={{background:'white', borderRadius:'14px', padding:'28px 30px', width:'420px', maxWidth:'95vw'}}>
-        <div style={{fontSize:'20px', fontWeight:'600', color:'#1C1917', marginBottom:'4px'}}>Add student</div>
-        <div style={{fontSize:'13px', color:'#78716C', marginBottom:'24px'}}>Create a file for a new student</div>
+    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{background: theme.surface, borderRadius:'14px', padding:'30px 32px', width:'440px', maxWidth:'95vw', border:`1px solid ${theme.border}`}}>
+        <div style={{fontSize:'21px', fontWeight:'700', color: theme.text, marginBottom:'4px', letterSpacing:'-0.3px'}}>Add student</div>
+        <div style={{fontSize:'13px', color: theme.text3, marginBottom:'26px'}}>Create a file for a new student</div>
         <div style={{marginBottom:'16px'}}>
-          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Full name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Maya Adeyemi" style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
+          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>Full name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Maya Adeyemi" style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
         </div>
         <div style={{marginBottom:'16px'}}>
-          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Program</label>
-          <input value={program} onChange={e => setProgram(e.target.value)} placeholder="e.g. Yorkville MACP" style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
+          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>Program</label>
+          <input value={program} onChange={e => setProgram(e.target.value)} placeholder="e.g. Yorkville MACP" style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
         </div>
-        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px', paddingTop:'20px', borderTop:'1px solid #F2EFE9'}}>
-          <button onClick={onClose} style={{background:'none', border:'1px solid #D4CFC8', borderRadius:'8px', padding:'9px 16px', fontSize:'13.5px', cursor:'pointer', color:'#44403C'}}>Cancel</button>
-          <button onClick={handleCreate} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer'}}>Add student</button>
+        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'22px', paddingTop:'20px', borderTop:`1px solid ${theme.border}`}}>
+          <button onClick={onClose} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'9px', padding:'10px 18px', fontSize:'13.5px', cursor:'pointer', color: theme.text2}}>Cancel</button>
+          <button onClick={handleCreate} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer'}}>Add student</button>
         </div>
       </div>
     </div>
   )
 }
 
-function UploadFormModal({ onClose, onUpload }: { onClose: () => void, onUpload: (form: Omit<FormTemplate, 'id'>) => void }) {
+function UploadFormModal({ onClose, onUpload, theme }: { onClose: () => void, onUpload: (form: Omit<FormTemplate, 'id'>) => void, theme: Record<string, string> }) {
   const [name, setName] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [parsing, setParsing] = useState(false)
@@ -1018,77 +960,49 @@ function UploadFormModal({ onClose, onUpload }: { onClose: () => void, onUpload:
   const handleUpload = async () => {
     if (!name) { alert('Please enter a program name'); return }
     setParsing(true)
-
     try {
       if (selectedFile) {
         const formData = new FormData()
         formData.append('file', selectedFile)
-
-        const response = await fetch('/api/parse-form', {
-          method: 'POST',
-          body: formData,
-        })
-
+        const response = await fetch('/api/parse-form', { method: 'POST', body: formData })
         const data = await response.json()
-
         if (data.fields && data.fields.length > 0) {
           onUpload({ name, fields: data.fields })
-          alert(`Form parsed successfully — ${data.fields.length} fields detected`)
+          alert(`Form parsed — ${data.fields.length} fields detected`)
         } else {
-          alert('Could not detect fields from the document. Using default fields.')
           onUpload({ name, fields: ['Student name', 'Session date', 'Duration', 'Case presented', 'Theoretical approach', 'Supervisor observations', 'Goals for next session', 'Supervisor signature'] })
         }
       } else {
         onUpload({ name, fields: ['Student name', 'Session date', 'Duration', 'Case presented', 'Theoretical approach', 'Supervisor observations', 'Goals for next session', 'Supervisor signature'] })
       }
     } catch {
-      alert('Upload failed. Using default fields.')
       onUpload({ name, fields: ['Student name', 'Session date', 'Duration', 'Case presented', 'Theoretical approach', 'Supervisor observations', 'Goals for next session', 'Supervisor signature'] })
     }
-
     setParsing(false)
     onClose()
   }
 
   return (
-    <div style={{position:'fixed', inset:0, background:'rgba(28,25,23,0.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={{background:'white', borderRadius:'14px', padding:'28px 30px', width:'460px', maxWidth:'95vw'}}>
-        <div style={{fontSize:'20px', fontWeight:'600', color:'#1C1917', marginBottom:'4px'}}>Upload form template</div>
-        <div style={{fontSize:'13px', color:'#78716C', marginBottom:'24px'}}>Upload your Word doc — Supervisio reads the fields automatically</div>
+    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100}} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{background: theme.surface, borderRadius:'14px', padding:'30px 32px', width:'480px', maxWidth:'95vw', border:`1px solid ${theme.border}`}}>
+        <div style={{fontSize:'21px', fontWeight:'700', color: theme.text, marginBottom:'4px', letterSpacing:'-0.3px'}}>Upload form template</div>
+        <div style={{fontSize:'13px', color: theme.text3, marginBottom:'26px'}}>Upload your Word doc — Supervisio reads the fields automatically</div>
         <div style={{marginBottom:'16px'}}>
-          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color:'#44403C', fontWeight:'600', marginBottom:'6px'}}>Program name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Yorkville MACP" style={{width:'100%', padding:'10px 12px', border:'1px solid #D4CFC8', borderRadius:'8px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color:'#1C1917', boxSizing:'border-box'}} />
+          <label style={{display:'block', fontSize:'11.5px', textTransform:'uppercase', letterSpacing:'0.5px', color: theme.text2, fontWeight:'700', marginBottom:'6px'}}>Program name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Yorkville MACP" style={{width:'100%', padding:'10px 13px', border:`1px solid ${theme.border2}`, borderRadius:'9px', fontSize:'14px', fontFamily:'system-ui', outline:'none', color: theme.text, background: theme.surface, boxSizing:'border-box'}} />
         </div>
-        <div
-          style={{border:'1.5px dashed #D4CFC8', borderRadius:'8px', padding:'24px', textAlign:'center', background:'#F9F7F4', cursor:'pointer', marginBottom:'16px'}}
-          onClick={() => document.getElementById('form-file-input')?.click()}
-        >
-          <div style={{width:'36px', height:'36px', borderRadius:'8px', background:'#EBF3EE', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px'}}>
-            <svg width="16" height="16" fill="none" stroke="#1C5C3E" strokeWidth="1.5" viewBox="0 0 16 16"><path d="M8 2v8M5 5l3-3 3 3"/><path d="M3 11v2h10v-2"/></svg>
+        <div style={{border:`1.5px dashed ${theme.border2}`, borderRadius:'9px', padding:'26px', textAlign:'center', background: theme.surface2, cursor:'pointer', marginBottom:'16px'}} onClick={() => document.getElementById('form-file-input')?.click()}>
+          <div style={{width:'38px', height:'38px', borderRadius:'9px', background: theme.accentLight, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px'}}>
+            <svg width="16" height="16" fill="none" stroke={theme.accentText} strokeWidth="1.5" viewBox="0 0 16 16"><path d="M8 2v8M5 5l3-3 3 3"/><path d="M3 11v2h10v-2"/></svg>
           </div>
-          <div style={{fontSize:'13.5px', fontWeight:'500', color:'#44403C'}}>
-            {selectedFile ? `✓ ${selectedFile.name}` : 'Click to upload your form'}
-          </div>
-          <div style={{fontSize:'12px', color:'#78716C', marginTop:'3px'}}>Word doc (.docx) — fields detected automatically</div>
-          <input
-            id="form-file-input"
-            type="file"
-            accept=".docx"
-            style={{display:'none'}}
-            onChange={e => {
-              const file = e.target.files?.[0]
-              if (file) setSelectedFile(file)
-            }}
-          />
+          <div style={{fontSize:'13.5px', fontWeight:'500', color: theme.text}}>{selectedFile ? `✓ ${selectedFile.name}` : 'Click to upload your form'}</div>
+          <div style={{fontSize:'12px', color: theme.text3, marginTop:'3px'}}>Word doc (.docx) — fields detected automatically</div>
+          <input id="form-file-input" type="file" accept=".docx" style={{display:'none'}} onChange={e => { const file = e.target.files?.[0]; if (file) setSelectedFile(file) }} />
         </div>
-        {!selectedFile && (
-          <div style={{fontSize:'12px', color:'#78716C', marginBottom:'16px', textAlign:'center'}}>
-            Don't have the form yet? We'll use 8 default fields for now.
-          </div>
-        )}
-        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'20px', paddingTop:'20px', borderTop:'1px solid #F2EFE9'}}>
-          <button onClick={onClose} style={{background:'none', border:'1px solid #D4CFC8', borderRadius:'8px', padding:'9px 16px', fontSize:'13.5px', cursor:'pointer', color:'#44403C'}}>Cancel</button>
-          <button onClick={handleUpload} disabled={parsing} style={{background:'#2D5A42', color:'white', border:'none', borderRadius:'8px', padding:'9px 18px', fontSize:'13.5px', fontWeight:'500', cursor:'pointer', opacity: parsing ? 0.7 : 1}}>
+        {!selectedFile && <div style={{fontSize:'12px', color: theme.text3, marginBottom:'16px', textAlign:'center'}}>Don't have the form yet? We'll use 8 default fields for now.</div>}
+        <div style={{display:'flex', gap:'10px', justifyContent:'flex-end', marginTop:'22px', paddingTop:'20px', borderTop:`1px solid ${theme.border}`}}>
+          <button onClick={onClose} style={{background:'none', border:`1px solid ${theme.border2}`, borderRadius:'9px', padding:'10px 18px', fontSize:'13.5px', cursor:'pointer', color: theme.text2}}>Cancel</button>
+          <button onClick={handleUpload} disabled={parsing} style={{background: theme.accent, color:'white', border:'none', borderRadius:'9px', padding:'10px 20px', fontSize:'13.5px', fontWeight:'600', cursor:'pointer', opacity: parsing ? 0.7 : 1}}>
             {parsing ? 'Reading form...' : 'Save template'}
           </button>
         </div>
