@@ -153,12 +153,12 @@ export default function Home() {
 
   return (
     <div style={{display:'flex', minHeight:'100vh', fontFamily:'system-ui, sans-serif', background: theme.bg, color: theme.text}}>
-      <aside style={{width:'240px', background: theme.sidebar, display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', top:0, left:0, bottom:0}}>
-        <div style={{padding:'24px 20px 20px', borderBottom:`1px solid ${theme.sidebarBorder}`}}>
+      <aside className="app-sidebar" style={{width:'240px', background: theme.sidebar, display:'flex', flexDirection:'column', flexShrink:0, position:'fixed', top:0, left:0, bottom:0}}>
+        <div className="app-logo" style={{padding:'24px 20px 20px', borderBottom:`1px solid ${theme.sidebarBorder}`}}>
           <div style={{fontSize:'20px', fontWeight:'700', color:'#FFFFFF', letterSpacing:'-0.3px'}}>Supervisio</div>
           <div style={{fontSize:'11px', color: theme.sidebarText, marginTop:'3px', letterSpacing:'0.3px'}}>Clinical supervision, simplified</div>
         </div>
-        <nav style={{flex:1, padding:'14px 10px', overflowY:'auto'}}>
+        <nav className="app-nav" style={{flex:1, padding:'14px 10px', overflowY:'auto'}}>
           <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color: theme.sidebarText, padding:'8px 12px 6px', fontWeight:'600', opacity:0.6}}>Workspace</div>
           <NavItem id="dashboard" label="Overview" />
           <NavItem id="sessions" label="Sessions" />
@@ -174,7 +174,7 @@ export default function Home() {
           <div style={{fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color: theme.sidebarText, padding:'14px 12px 6px', fontWeight:'600', opacity:0.6}}>Account</div>
           <NavItem id="settings" label="Settings" />
         </nav>
-        <div style={{padding:'12px 10px', borderTop:`1px solid ${theme.sidebarBorder}`}}>
+        <div className="app-footer" style={{padding:'12px 10px', borderTop:`1px solid ${theme.sidebarBorder}`}}>
           <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px'}}>
             <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
               <div style={{width:'32px', height:'32px', borderRadius:'50%', background: theme.sidebarActive, color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600'}}>
@@ -192,7 +192,7 @@ export default function Home() {
         </div>
       </aside>
 
-      <main style={{marginLeft:'240px', flex:1, padding:'32px 40px'}}>
+      <main className="app-main" style={{marginLeft:'240px', flex:1, padding:'32px 40px'}}>
         {page === 'dashboard' && <Dashboard sessions={sessions} students={students} generatedForms={generatedForms} setPage={setPage} onNewSession={() => setShowNewSession(true)} supervisor={supervisor} theme={theme} />}
         {page === 'sessions' && <Sessions sessions={sessions} setSessions={setSessions} forms={forms} onNewSession={() => setShowNewSession(true)} theme={theme} />}
         {page === 'reports' && <Reports generatedForms={generatedForms} sessions={sessions} setGeneratedForms={setGeneratedForms} theme={theme} />}
@@ -253,7 +253,7 @@ function LandingPage() {
         @media (max-width: 768px) {
           .l-nav { padding: 0 20px !important; }
           .l-hero { padding: 60px 24px 70px !important; }
-          .l-hero-h1 { font-size: 36px !important; letter-spacing: -0.5px !important; }
+          .l-hero-h1 { font-size: 32px !important; letter-spacing: -0.5px !important; }
           .l-hero-p { font-size: 15px !important; }
           .l-hero-btns { flex-direction: column !important; align-items: stretch !important; text-align: center !important; }
           .l-section { padding: 56px 24px !important; }
@@ -261,13 +261,24 @@ function LandingPage() {
           .l-grid-3 { grid-template-columns: 1fr !important; }
           .l-grid-2 { grid-template-columns: 1fr !important; }
           .l-steps { grid-template-columns: 1fr !important; gap: 36px !important; }
-          .l-stats { grid-template-columns: 1fr !important; }
           .l-footer { padding: 24px 20px !important; flex-direction: column !important; gap: 8px !important; text-align: center !important; }
-          .l-cta-h2 { font-size: 30px !important; }
+          .l-cta-h2 { font-size: 28px !important; }
+          .app-sidebar { width: 100% !important; height: 60px !important; bottom: auto !important; flex-direction: row !important; padding: 0 !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; z-index: 50 !important; }
+          .app-logo { display: none !important; }
+          .app-nav { flex-direction: row !important; padding: 0 8px !important; overflow-x: auto !important; overflow-y: hidden !important; align-items: center !important; flex: 1 !important; }
+          .app-nav-label { display: none !important; }
+          .app-nav-btn { padding: 8px 10px !important; font-size: 12px !important; margin-bottom: 0 !important; white-space: nowrap !important; }
+          .app-footer { display: none !important; }
+          .app-main { margin-left: 0 !important; padding: 16px !important; margin-top: 60px !important; }
+          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .two-col { grid-template-columns: 1fr !important; }
+          .three-col { grid-template-columns: 1fr !important; }
+          .four-col { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .form-grid { grid-template-columns: 1fr !important; }
+          .student-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
-      {/* Nav */}
       <nav className="l-nav" style={{background:'#1A3C2E', padding:'0 60px', display:'flex', alignItems:'center', justifyContent:'space-between', height:'64px', position:'sticky', top:0, zIndex:50}}>
         <div style={{fontSize:'20px', fontWeight:'700', color:'white', letterSpacing:'-0.3px'}}>Supervisio</div>
         <div style={{display:'flex', alignItems:'center', gap:'16px'}}>
@@ -276,7 +287,6 @@ function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
       <div className="l-hero" style={{background:'#1A3C2E', padding:'100px 60px 110px', textAlign:'center'}}>
         <div style={{display:'inline-block', background:'rgba(255,255,255,0.1)', color:'#A8D5BC', fontSize:'12px', fontWeight:'600', padding:'6px 16px', borderRadius:'20px', letterSpacing:'0.8px', textTransform:'uppercase', marginBottom:'28px'}}>
           Built for clinical supervisors
@@ -294,7 +304,6 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Problem */}
       <div className="l-section" style={{background:'#EDE8DF', padding:'80px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'680px', margin:'0 auto'}}>
           <h2 className="l-h2" style={{fontSize:'34px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'20px'}}>
@@ -319,14 +328,13 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* How it works */}
       <div id="how" className="l-section" style={{background:'white', padding:'90px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'800px', margin:'0 auto'}}>
           <div style={{fontSize:'12px', color:'#2D7A52', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'16px'}}>How it works</div>
           <h2 className="l-h2" style={{fontSize:'36px', fontWeight:'700', color:'#1A1614', letterSpacing:'-0.8px', marginBottom:'56px'}}>Simple from start to finish</h2>
           <div className="l-steps" style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'32px'}}>
             {[
-              {step:'01', title:'Upload your form', desc:'Start by uploading your program\'s supervision form. Supervisio reads the fields and learns what information to capture.'},
+              {step:'01', title:'Upload your form', desc:"Start by uploading your program's supervision form. Supervisio reads the fields and learns what information to capture."},
               {step:'02', title:'Add a session recording', desc:'After each supervision session, upload the recording. Supervisio transcribes it and identifies each participant.'},
               {step:'03', title:'Review and download', desc:'A completed form is generated per student. Review it on screen, download the Word document, and submit.'},
             ].map(s => (
@@ -341,7 +349,6 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Features */}
       <div className="l-section" style={{background:'#1A3C2E', padding:'90px 60px'}}>
         <div style={{maxWidth:'900px', margin:'0 auto'}}>
           <div style={{textAlign:'center', marginBottom:'56px'}}>
@@ -351,7 +358,7 @@ function LandingPage() {
           <div className="l-grid-2" style={{display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:'20px'}}>
             {[
               {icon:'🎙', title:'Session transcription', desc:'Supports Zoom, Teams, and standard audio/video formats. Speaker identification included.'},
-              {icon:'📋', title:'Custom form support', desc:'Upload your program\'s specific supervision form. Fields are detected and filled accordingly.'},
+              {icon:'📋', title:'Custom form support', desc:"Upload your program's specific supervision form. Fields are detected and filled accordingly."},
               {icon:'👥', title:'Group supervision', desc:'Multiple students in one session are handled individually. A separate form is generated for each.'},
               {icon:'📥', title:'Word document export', desc:'Download a completed document formatted for submission. Editable before sending.'},
               {icon:'📊', title:'Student progress', desc:'Track supervision hours and session history for each student in one place.'},
@@ -367,7 +374,6 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* CTA */}
       <div className="l-section" style={{background:'#EDE8DF', padding:'100px 60px', textAlign:'center'}}>
         <div style={{maxWidth:'540px', margin:'0 auto'}}>
           <h2 className="l-cta-h2" style={{fontSize:'38px', fontWeight:'800', color:'#1A1614', letterSpacing:'-1px', marginBottom:'18px', lineHeight:'1.15'}}>
@@ -382,7 +388,6 @@ function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="l-footer" style={{background:'#1A3C2E', padding:'32px 60px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
         <div style={{fontSize:'16px', fontWeight:'700', color:'white'}}>Supervisio</div>
         <div style={{fontSize:'13px', color:'#6B9B82'}}>Clinical supervision documentation, simplified</div>
