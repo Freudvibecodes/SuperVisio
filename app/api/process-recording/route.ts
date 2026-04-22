@@ -20,6 +20,11 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('id', sessionId)
       .single()
+      const templateId = formData.get('templateId') as string | null
+
+if (templateId) {
+  await supabase.from('sessions').update({ form_template_id: templateId }).eq('id', sessionId)
+}
 
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })

@@ -40,12 +40,22 @@ export async function GET() {
               `Speaker ${u.speaker}: ${u.text}`).join('\n')
           : pollData.text
 
-        const { data: formTemplates } = await supabase
-          .from('form_templates')
-          .select('*')
-          .eq('supervisor_id', session.supervisor_id)
+        let formTemplate = null
 
-        const formTemplate = formTemplates?.[0]
+if (session.form_template_id) {
+  const { data } = await supabase
+    .from('form_templates')
+    .select('*')
+    .eq('id', session.form_template_id)
+    .single()
+  formTemplate = data
+} else {
+  const { data: formTemplates } = await supabase
+    .from('form_templates')
+    .select('*')
+    .eq('supervisor_id', session.supervisor_id)
+  formTemplate = formTemplates?.[0]
+}
 
         if (!formTemplate) {
           console.log('No form template found for session', session.id)

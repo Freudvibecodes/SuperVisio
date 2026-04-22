@@ -179,7 +179,7 @@ const setupRealtime = (userId: string) => {
 
       <main style={{marginLeft:'230px', flex:1, padding:'32px 36px'}}>
         {page === 'dashboard' && <Dashboard sessions={sessions} students={students} generatedForms={generatedForms} setPage={setPage} onNewSession={() => setShowNewSession(true)} supervisor={supervisor} />}
-        {page === 'sessions' && <Sessions sessions={sessions} setSessions={setSessions} onNewSession={() => setShowNewSession(true)} />}
+        {page === 'sessions' && <Sessions sessions={sessions} setSessions={setSessions} forms={forms} onNewSession={() => setShowNewSession(true)} />}
         {page === 'reports' && <Reports generatedForms={generatedForms} sessions={sessions} setGeneratedForms={setGeneratedForms} />}
         {page === 'forms' && <Forms forms={forms} setForms={setForms} onUpload={() => setShowUploadForm(true)} />}
         {page === 'students' && <StudentsPage students={students} sessions={sessions} onNewStudent={() => setShowNewStudent(true)} setPage={setPage} />}
@@ -358,11 +358,12 @@ function Dashboard({ sessions, students, generatedForms, setPage, onNewSession, 
   )
 }
 
-function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[], setSessions: (s: Session[]) => void, onNewSession: () => void }) {
+function Sessions({ sessions, setSessions, forms, onNewSession }: { sessions: Session[], setSessions: (s: Session[]) => void, forms: FormTemplate[], onNewSession: () => void }) {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
-  const [recordingUrl, setRecordingUrl] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [processing, setProcessing] = useState<string | null>(null)
+const [recordingUrl, setRecordingUrl] = useState('')
+const [selectedFile, setSelectedFile] = useState<File | null>(null)
+const [processing, setProcessing] = useState<string | null>(null)
+const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this session?')) return
@@ -378,8 +379,14 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
     setProcessing(sessionId)
 
     try {
-      const formData = new FormData()
-      formData.append('sessionId', sessionId)
+      if (!selectedTemplateId && forms.length > 0) {
+      alert('Please select a form template')
+      setProcessing(null)
+      return
+    }
+const formData = new FormData()
+formData.append('sessionId', sessionId)
+formData.append('templateId', selectedTemplateId)
       if (selectedFile) {
         formData.append('file', selectedFile)
       } else {
@@ -470,6 +477,26 @@ function Sessions({ sessions, setSessions, onNewSession }: { sessions: Session[]
             {uploadingFor === s.id && (
               <div style={{background:'#F9F7F4', border:'1px solid #E8E3DB', borderTop:'none', borderBottomLeftRadius:'10px', borderBottomRightRadius:'10px', padding:'16px 18px', marginBottom:'10px'}}>
                 <div style={{fontSize:'13px', fontWeight:'500', color:'#1C1917', marginBottom:'10px'}}>Add session recording</div>
+                {forms.length > 0 && (
+  <div style={{marginBottom:'14px'}}>
+    <div style={{fontSize:'12px', color:'#78716C', marginBottom:'6px', fontWeight:'500'}}>Select form template:</div>
+    <select
+      value={selectedTemplateId}
+      onChange={e => setSelectedTemplateId(e.target.value)}
+      style={{width:'100%', padding:'8px 12px', border:'1px solid #D4CFC8', borderRadius:'7px', fontSize:'13px', fontFamily:'system-ui', outline:'none', color:'#1C1917', background:'white'}}
+    >
+      <option value="">Choose a template...</option>
+      {forms.map(f => (
+        <option key={f.id} value={f.id}>{f.name} — {f.fields.length} fields</option>
+      ))}
+    </select>
+  </div>
+)}
+{forms.length === 0 && (
+  <div style={{background:'#FEF3C7', border:'1px solid #FDE68A', borderRadius:'7px', padding:'10px 14px', marginBottom:'14px', fontSize:'12.5px', color:'#92400E'}}>
+    No form templates yet — upload one in Form templates first
+  </div>
+)}
                 <div style={{fontSize:'12px', color:'#78716C', marginBottom:'8px'}}>Option 1 — Upload a file directly from your computer:</div>
                 <div
                   style={{border:'1.5px dashed #D4CFC8', borderRadius:'7px', padding:'16px', textAlign:'center', background:'white', cursor:'pointer', marginBottom:'12px'}}
